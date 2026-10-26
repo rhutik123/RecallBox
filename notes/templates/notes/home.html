@@ -1,0 +1,63 @@
+{% extends "notes/base.html" %}
+
+{% block title %}My Notes | RecallBox{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1">My Notes</h1>
+            <p class="text-secondary mb-0">
+                Your knowledge, organized.
+            </p>
+        </div>
+
+        <a href="{% url 'note_create' %}" class="btn btn-primary">
+            + Create Note
+        </a>
+    </div>
+
+</div>
+
+{% if notes %}
+<div class="row g-4">
+    {% for note in notes %}
+    <div class="col-md-6 col-lg-4">
+        <article class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <span class="badge text-bg-primary mb-2">
+                    {{ note.get_note_type_display }}
+                </span>
+
+                <h2 class="h5 card-title">
+                    {{ note.title }}
+                </h2>
+
+                <p class="card-text text-secondary">
+                    {{ note.body|truncatewords:25 }}
+                </p>
+
+                <small class="text-secondary">
+                    Updated {{ note.updated_at|date:"M j, Y" }}
+                </small>
+                <a href="{% url 'note_update' note.pk %}" class="btn btn-outline-primary btn-sm mt-3">
+                    Edit note
+                </a>
+                <a href="{% url 'note_delete' note.pk %}" class="btn btn-outline-danger btn-sm mt-3">
+                    Delete
+                </a>
+            </div>
+        </article>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-3 p-5 text-center shadow-sm">
+    <h2 class="h4">No notes yet</h2>
+    <p class="text-secondary mb-0">
+        Your saved notes will appear here.
+    </p>
+</div>
+{% endif %}
+{% endblock %}
