@@ -1,57 +1,71 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, login
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 
-from .forms import NoteForm
+from .forms import NoteForm, RegisterForm, TagForm
 from .models import Note
 
 # Create your views here.
 
-def home(request):
-    notes = Note.objects.order_by("-updated_at")
-
-    context = {
-        "notes":notes
-    }
-
-    return render(request, "notes/home.html", context)
-
-def note_create(request):
-    User = get_user_model()
-    demo_user = User.objects.get(username="demo_user")
-
+def register(request):
     if request.method == "POST":
-        form = NoteForm(request.POST)
+        form = RegisterForm(request.POST)
+
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect("home")
+    else:
+        form = RegisterForm()
+
+    return render(request, "notes/register.html", {"form":form})
+
+
+@login_required
+def home(request):
+    notes = Note.objects.filter(
+        owner=request.user
+    ).order_by("-updated_at")
+
+    return render(request, "notes/home.html", {"notes": notes})
+
+
+@login_required
+def note_create(request):
+    if request.method == "POST":
+        form = NoteForm(request.POST, user=request.user)
 
         if form.is_valid():
             note = form.save(commit=False)
-            note.owner = demo_user
+            note.owner = request.user
             note.save()
+            form.save_m2m()
+            messages.success(request, "Note created successfully.")
             return redirect("home")
     else:
-        form = NoteForm()
+        form = NoteForm(user=request.user)
 
     return render(request, "notes/note_form.html", {"form": form})
 
-def note_update(request, pk):
-    User = get_user_model()
-    demo_user = User.objects.get(username="demo_user")
 
+@login_required
+def note_update(request, pk):
     note = get_object_or_404(
         Note,
         pk=pk,
-        owner=demo_user,
+        owner=request.user,
     )
 
     if request.method == 'POST':
-        form = NoteForm(request.POST, instance=note)
+        form = NoteForm(request.POST, instance=note, user=request.user)
 
         if form.is_valid():
             form.save()
+            messages.success(request, "Note updated successfully.")
             return redirect("home")
     else:
-        form = NoteForm(instance=note)
+        form = NoteForm(instance=note, user=request.user)
 
     return render(
         request,
@@ -62,14 +76,12 @@ def note_update(request, pk):
         }
     )
 
+@login_required
 def note_delete(request, pk):
-    User = get_user_model()
-    demo_user = User.objects.get(username="demo_user")
-
     note = get_object_or_404(
         Note,
         pk=pk,
-        owner=demo_user
+        owner=request.user
     )
 
     if request.method == "POST":
@@ -82,3 +94,20 @@ def note_delete(request, pk):
         "notes/note_confirm_delete.html",
         {"note":note}
     )
+
+@login_required
+def tag_create(request):
+    if request.method == "POST":
+        form = TagForm(request.POST)
+
+        if form.is_valid():
+            tag = form.save(commit=False)
+            tag.owner = request.user
+            tag.save()
+            messages.success(request, "Tag created successfully.")
+            return redirect("tag_create")
+    else:
+        form = TagForm()
+
+    return render(request, "notes/tag_form.html", {"form":form})
+

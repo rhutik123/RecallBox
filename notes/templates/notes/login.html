@@ -1,0 +1,33 @@
+{% extends "notes/base.html" %}
+
+{% block title %}Log In | RecallBox{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h1 class="h3 mb-4">Log in to RecallBox</h1>
+
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+
+                    {% if next %}
+                    <input type="hidden" name="next" value="{{ next }}">
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        Log in
+                    </button>
+                </form>
+
+                <p class="mt-3 mb-0">
+                    New to RecallBox?
+                    <a href="{% url 'register' %}">Create an account</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
