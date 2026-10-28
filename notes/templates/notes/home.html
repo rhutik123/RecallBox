@@ -142,9 +142,31 @@
                             {{ note.title }}
                         </h2>
 
-                        <p class="card-text text-secondary">
-                            {{ note.body|truncatewords:25 }}
-                        </p>
+                        {% if note.note_type == "code" %}
+                            {% if note.code_language %}
+                                <span class="badge text-bg-secondary mb-2">
+                                    {{ note.code_language }}
+                                </span>
+                            {% endif %}
+
+                            <pre class="bg-light rounded p-3 text-wrap"><code>{{ note.body|truncatewords:25 }}</code></pre>
+
+                        {% else %}
+                            <p class="card-text text-secondary">
+                                {{ note.body|truncatewords:25 }}
+                            </p>
+                        {% endif %}
+
+                        {% if note.note_type == "link" and note.url %}
+                            <a
+                                href="{{ note.url }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="btn btn-outline-primary btn-sm mt-2"
+                            >
+                                Open link
+                            </a>
+                        {% endif %}
 
                         <small class="text-secondary">
                             Updated {{ note.updated_at|date:"M j, Y" }}

@@ -340,3 +340,70 @@ class NoteSearchTests(TestCase):
         self.assertContains(response, f"tag={tag.pk}")
         self.assertContains(response, "type=text")
         self.assertContains(response, "archived=false")
+
+
+class NoteFormTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="formtester",
+            password="test-password-123",
+        )
+
+    def test_link_note_requires_url(self):
+        from .forms import NoteForm
+
+        form = NoteForm(
+            data = {
+                    "title": "Django documentation",
+                    "body": "Official guide to Django",
+                    "note_type": "link",
+                    "code_language": "",
+                    "url": "",
+                    "archived": False,
+                    "tags": [],
+                },
+                user = self.user,
+            )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("url", form.errors)
+
+    def test_link_note_accepts_valid_url(self):
+        from .forms import NoteForm
+
+        form = NoteForm(
+            data={
+                "title": "Django documentation",
+                "body": "Official guide to Django",
+                "note_type": "link",
+                "code_language": "",
+                "url": "https://docs.djangoproject.com/",
+                "archived": False,
+                "tags": [],
+            },
+            user=self.user,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_code_note_does_not_require_url(self):
+        from .forms import NoteForm
+
+        form = NoteForm(
+            data={
+                "title": "Python example",
+                "body": "print('Hello, world!')",
+                "note_type": "code",
+                "code_language": "Python",
+                "url": "",
+                "archived": False,
+                "tags": [],
+            },
+            user=self.user,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(
+            form.cleaned_data["code_language"],
+            "Python",
+        )

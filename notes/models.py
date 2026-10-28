@@ -17,6 +17,17 @@ class Note(models.Model):
 
     title = models.CharField(max_length=200)
     body = models.TextField()
+
+    code_language = models.CharField(
+        max_length=50,
+        blank=True
+    )
+
+    url = models.URLField(
+        max_length=2048,
+        blank=True
+    )
+
     note_type = models.CharField(
         max_length=10,
         choices=NoteType.choices,
