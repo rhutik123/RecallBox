@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from .forms import NoteForm, RegisterForm, TagForm
 from .models import Note, Tag
 from django.db.models import Q
+from django.core.paginator import Paginator
 
 # Create your views here.
 
@@ -51,8 +52,12 @@ def home(request):
     elif archived_filter == "false":
         notes = notes.filter(archived=False)
 
+    paginator = Paginator(notes, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
         
-    return render(request, "notes/home.html", {"notes": notes, "tags":tags, "selected_tag":selected_tag, "search_query": search_query,"selected_type":selected_type, "note_types":Note.NoteType.choices, "archived_filter":archived_filter},)
+    return render(request, "notes/home.html", {"notes": notes, "tags":tags, "selected_tag":selected_tag, "search_query": search_query,"selected_type":selected_type, "note_types":Note.NoteType.choices, "archived_filter":archived_filter, "page_obj":page_obj},)
 
 
 @login_required

@@ -1,10 +1,8 @@
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
 from .models import Note, Tag
-
 
 User = get_user_model()
 
@@ -100,7 +98,7 @@ class NoteOwnershipTests(TestCase):
         )
 
 class NoteTagTests(TestCase):
-    def setUP(self):
+    def setUp(self):
         self.user = User.objects.create_user(
             username="tagtester",
             password="test-password-123",
@@ -114,22 +112,231 @@ class NoteTagTests(TestCase):
             name="Django",
         )
 
-        def test_note_can_have_one_tag(self):
-            note = Note.objects.create(
-                owner = self.user,
-                title = "Python Note",
-                body = "A Python Note",
-            )
+    def test_note_can_have_one_tag(self):
+        note = Note.objects.create(
+            owner=self.user,
+            title="Python Note",
+            body="A Python note",
+        )
 
-            note.tags.add(self.tag1)
-            self.assertEqual(note.tags.count(), 1)
+        note.tags.add(self.tag1)
 
-        def test_note_can_have_multiple_tags(self):
-            note = Note.objects.create(
+        self.assertEqual(note.tags.count(), 1)
+
+    def test_note_can_have_multiple_tags(self):
+        note = Note.objects.create(
             owner=self.user,
             title="Development note",
             body="Python and Django",
+        )
+
+        note.tags.add(self.tag1, self.tag2)
+
+        self.assertEqual(note.tags.count(), 2)
+
+
+class NoteSearchTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+        username="searchuser",
+        password="test-password-123",
+        )
+
+        Note.objects.create(
+            owner=self.user,
+            title="Python tutorial",
+            body="Learn programming basics",
+        )
+
+        Note.objects.create(
+            owner=self.user,
+            title="Django guide",
+            body="Learn Python web development",
+        )
+
+        Note.objects.create(
+            owner=self.user,
+            title="Shopping list",
+            body="Buy milk and bread",
+        )
+
+        self.client.login(
+        username="searchuser",
+        password="test-password-123",
+        )
+
+        def test_search_finds_note_by_title(self):
+            response = self.client.get(reverse("home"), {"q", "web development"})
+
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, "Django guide")
+            self.assertNotContains(response, "Shopping list")
+
+        def test_search_with_no_matches(self):
+            response = self.client.get(
+                reverse("home"),
+                {"q": "something-that-does-not-exist"},
             )
-            
-            note.tags.add(self.tag1, self.tag2)
-            self.assertEqual(note.tags.count(), 2)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, "No matching notes")
+            self.assertNotContains(response, "Python tutorial")
+
+    def test_search_combined_with_note_type_and_tag(self):
+        tag = Tag.objects.create(
+            owner=self.user,
+            name="Django",
+        )
+
+        matching_note = Note.objects.create(
+            owner=self.user,
+            title="Python web tutorial",
+            body="Build a web application",
+            note_type=Note.NoteType.TEXT,
+        )
+        matching_note.tags.add(tag)
+
+        wrong_type_note = Note.objects.create(
+            owner=self.user,
+            title="Python code example",
+            body="Build a web application",
+            note_type=Note.NoteType.CODE,
+        )
+        wrong_type_note.tags.add(tag)
+
+        wrong_tag_note = Note.objects.create(
+            owner=self.user,
+            title="Python web reference",
+            body="Build a web application",
+            note_type=Note.NoteType.TEXT,
+        )
+
+        response = self.client.get(
+            reverse("home"),
+            {
+                "q": "Python",
+                "tag": str(tag.pk),
+                "type": "text",
+                "archived": "false",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Python web tutorial")
+        self.assertNotContains(response, "Python code example")
+        self.assertNotContains(response, "Python web reference")
+
+    def test_pagination_shows_ten_notes_per_page(self):
+        for i in range(12):
+            Note.objects.create(
+                owner=self.user,
+                title=f"Pagination note {i}",
+                body=f"Body for note {i}",
+            )
+
+        response = self.client.get(reverse("home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["page_obj"]), 10)
+        self.assertEqual(response.context["page_obj"].paginator.num_pages, 2)
+
+    def test_pagination_can_open_second_page(self):
+        for i in range(12):
+            Note.objects.create(
+                owner=self.user,
+                title=f"Pagination note {i}",
+                body=f"Body for note {i}",
+            )
+
+        response = self.client.get(
+            reverse("home"),
+            {"page": 2},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].number, 2)
+        self.assertLessEqual(len(response.context["page_obj"]), 10)
+
+    def test_pagination_preserves_search_and_filters(self):
+        tag = Tag.objects.create(
+            owner=self.user,
+            name="Django",
+        )
+    
+        for i in range(12):
+            note = Note.objects.create(
+                owner=self.user,
+                title=f"Python tutorial {i}",
+                body="Learn Django",
+                note_type=Note.NoteType.TEXT,
+            )
+            note.tags.add(tag)
+
+        response = self.client.get(
+            reverse("home"),
+            {
+                "q": "Python",
+                "tag": str(tag.pk),
+                "type": "text",
+                "archived": "false",
+                "page": 2,
+            },
+        )
+    
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].number, 2)
+        self.assertEqual(response.context["search_query"], "Python")
+        self.assertEqual(response.context["selected_type"], "text")
+        self.assertEqual(response.context["archived_filter"], "false")
+
+    def test_search_does_not_show_another_users_notes(self):
+        other_user = User.objects.create_user(
+            username="othersearchuser",
+            password="test-password-123",
+        )
+
+        Note.objects.create(
+            owner=other_user,
+            title="Secret Python project",
+            body="Private information",
+        )
+
+        response = self.client.get(
+            reverse("home"),
+            {"q": "Python"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Secret Python project")
+
+    def test_pagination_links_preserve_filters(self):
+        tag = Tag.objects.create(
+            owner=self.user,
+            name="Django",
+        )
+
+        for i in range(12):
+            note = Note.objects.create(
+                owner=self.user,
+                title=f"Python tutorial {i}",
+                body="Learn Django",
+                note_type=Note.NoteType.TEXT,
+            )
+            note.tags.add(tag)
+
+        response = self.client.get(
+            reverse("home"),
+            {
+                "q": "Python",
+                "tag": str(tag.pk),
+                "type": "text",
+                "archived": "false",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "page=2")
+        self.assertContains(response, "q=Python")
+        self.assertContains(response, f"tag={tag.pk}")
+        self.assertContains(response, "type=text")
+        self.assertContains(response, "archived=false")

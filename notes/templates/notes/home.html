@@ -127,9 +127,9 @@
 </form>
 
 <!-- Notes list -->
-{% if notes %}
+{% if page_obj %}
     <div class="row g-4">
-        {% for note in notes %}
+        {% for note in page_obj %}
             <div class="col-md-6 col-lg-4">
                 <article class="card h-100 border-0 shadow-sm">
                     <div class="card-body">
@@ -180,6 +180,44 @@
             </div>
         {% endfor %}
     </div>
+
+    
+    {% if page_obj.has_other_pages %}
+        <nav aria-label="Notes pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a
+                            class="page-link"
+                            href="?{% if search_query %}q={{ search_query|urlencode }}&{% endif %}{% if selected_tag %}tag={{ selected_tag|urlencode }}&{% endif %}{% if selected_type %}type={{ selected_type|urlencode }}&{% endif %}{% if archived_filter %}archived={{ archived_filter|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}"
+                        >
+                            Previous
+                        </a>
+                    </li>
+                {% endif %}
+
+                <li class="page-item active" aria-current="page">
+                    <span class="page-link">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a
+                            class="page-link"
+                            href="?{% if search_query %}q={{ search_query|urlencode }}&{% endif %}{% if selected_tag %}tag={{ selected_tag|urlencode }}&{% endif %}{% if selected_type %}type={{ selected_type|urlencode }}&{% endif %}{% if archived_filter %}archived={{ archived_filter|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}"
+                        >
+                            Next
+                        </a>
+                    </li>
+                {% endif %}
+
+            </ul>
+        </nav>
+    {% endif %}
+
 
 {% else %}
     <div class="bg-white rounded-3 p-5 text-center shadow-sm">
