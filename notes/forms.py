@@ -27,3 +27,7 @@ class TagForm(forms.ModelForm):
     class Meta:
         model = Tag
         fields = ["name"]
+
+    def clean_name(self):
+        name = self.cleaned_data["name"]
+        return name.strip()

@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 
 from .forms import NoteForm, RegisterForm, TagForm
-from .models import Note
+from .models import Note, Tag
 
 # Create your views here.
 
@@ -28,7 +28,13 @@ def home(request):
         owner=request.user
     ).order_by("-updated_at")
 
-    return render(request, "notes/home.html", {"notes": notes})
+    tags = Tag.objects.filter(owner=request.user)
+    selected_tag = request.GET.get("tag")
+
+    if selected_tag and tags.filter(pk=selected_tag).exists():
+        notes = notes.filter(tags__pk=selected_tag).distinct()
+        
+    return render(request, "notes/home.html", {"notes": notes, "tags":tags, "selected_tag":selected_tag})
 
 
 @login_required
