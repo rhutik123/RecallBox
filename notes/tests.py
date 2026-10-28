@@ -407,3 +407,43 @@ class NoteFormTests(TestCase):
             form.cleaned_data["code_language"],
             "Python",
         )
+
+    
+    def test_text_note_does_not_keep_url(self):
+        from .forms import NoteForm
+
+        form = NoteForm(
+            data={
+                "title": "My text note",
+                "body": "Some useful information",
+                "note_type": "text",
+                "code_language": "",
+                "url": "https://example.com/",
+                "archived": False,
+                "tags": [],
+            },
+            user=self.user,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["url"], "")
+
+
+    def test_text_note_does_not_keep_code_language(self):
+        from .forms import NoteForm
+
+        form = NoteForm(
+            data={
+                "title": "My text note",
+                "body": "Some useful information",
+                "note_type": "text",
+                "code_language": "Python",
+                "url": "",
+                "archived": False,
+                "tags": [],
+            },
+            user=self.user,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["code_language"], "")

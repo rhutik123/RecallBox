@@ -50,7 +50,7 @@ class NoteForm(forms.ModelForm):
             cleaned_data["url"] = ""
 
         if note_type != Note.NoteType.CODE:
-            cleaned_data["code language"] = ""
+            cleaned_data["code_language"] = ""
 
         return cleaned_data
 
