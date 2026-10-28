@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 
 from .forms import NoteForm, RegisterForm, TagForm
 from .models import Note, Tag
+from django.db.models import Q
 
 # Create your views here.
 
@@ -30,11 +31,28 @@ def home(request):
 
     tags = Tag.objects.filter(owner=request.user)
     selected_tag = request.GET.get("tag")
+    search_query = request.GET.get("q", "").strip()
+    selected_type = request.GET.get("type", "")
+    archived_filter = request.GET.get("archived", "")
+
+    if search_query:
+        notes = notes.filter(
+            Q(title__icontains=search_query) | Q(body__icontains=search_query)
+        )
 
     if selected_tag and tags.filter(pk=selected_tag).exists():
         notes = notes.filter(tags__pk=selected_tag).distinct()
+
+    if selected_type in Note.NoteType.values:
+        notes = notes.filter(note_type=selected_type)
+
+    if archived_filter == "true":
+        notes = notes.filter(archived=True)
+    elif archived_filter == "false":
+        notes = notes.filter(archived=False)
+
         
-    return render(request, "notes/home.html", {"notes": notes, "tags":tags, "selected_tag":selected_tag})
+    return render(request, "notes/home.html", {"notes": notes, "tags":tags, "selected_tag":selected_tag, "search_query": search_query,"selected_type":selected_type, "note_types":Note.NoteType.choices, "archived_filter":archived_filter},)
 
 
 @login_required
