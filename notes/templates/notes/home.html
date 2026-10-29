@@ -188,6 +188,10 @@
                                 class="btn btn-outline-success btn-sm" >
                                 Link note
                             </a>
+                            <a href="{% url 'note_revision_history' note.pk %}"
+                            class="btn btn-outline-info">
+                                Revision history
+                            </a>
                             <a
                                 href="{% url 'note_delete' note.pk %}"
                                 class="btn btn-outline-danger btn-sm"

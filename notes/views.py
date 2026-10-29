@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 
 from .forms import NoteForm, RegisterForm, TagForm, NotelinkForm
-from .models import Note, Tag, NoteLink
+from .models import Note, Tag, NoteLink, NoteRevision
 from django.db.models import Q
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
@@ -109,6 +109,73 @@ def note_detail(request, pk):
     )
 
 @login_required
+def note_revision_history(request, pk):
+    note = get_object_or_404(
+        Note,
+        pk=pk,
+        owner=request.user,
+    )
+    revisions = note.revisions.select_related(
+        "edited_by"
+    ).all()
+
+    return render(request, "notes/note_revision_history.html", {"note":note, "revisions":revisions},)
+
+
+@login_required
+def note_revision_restore(request, pk, revision_id):
+    if request.method != "POST":
+        return redirect("note_revision_history", pk=pk)
+
+    note = get_object_or_404(
+        Note,
+        pk=pk,
+        owner=request.user,
+    )
+
+    revision = get_object_or_404(
+        NoteRevision,
+        pk=revision_id,
+        note=note,
+    )
+
+    with transaction.atomic():
+        # Preserve the current version before restoring.
+        current_revision = NoteRevision.objects.create(
+            note=note,
+            title=note.title,
+            body=note.body,
+            note_type=note.note_type,
+            code_language=note.code_language,
+            url=note.url,
+            archived=note.archived,
+            edited_by=request.user,
+        )
+
+        # Copy current tags before changing the note's tags.
+        current_revision.tags.set(note.tags.all())
+
+        # Restore the selected revision's fields.
+        note.title = revision.title
+        note.body = revision.body
+        note.note_type = revision.note_type
+        note.code_language = revision.code_language
+        note.url = revision.url
+        note.archived = revision.archived
+        note.save()
+
+        # Restore the tags from the selected revision.
+        note.tags.set(revision.tags.all())
+
+    messages.success(
+        request,
+        "Previous version restored successfully.",
+    )
+
+    return redirect("note_revision_history", pk=note.pk)
+
+
+@login_required
 def note_create(request):
     if request.method == "POST":
         form = NoteForm(request.POST, user=request.user)
@@ -126,6 +193,7 @@ def note_create(request):
     return render(request, "notes/note_form.html", {"form": form})
 
 
+
 @login_required
 def note_update(request, pk):
     note = get_object_or_404(
@@ -134,24 +202,57 @@ def note_update(request, pk):
         owner=request.user,
     )
 
-    if request.method == 'POST':
-        form = NoteForm(request.POST, instance=note, user=request.user)
+    if request.method == "POST":
+        form = NoteForm(
+            request.POST,
+            instance=note,
+            user=request.user,
+        )
 
         if form.is_valid():
-            form.save()
-            messages.success(request, "Note updated successfully.")
+            if form.has_changed():
+                with transaction.atomic():
+                    # Capture the old version before updating the note.
+                    revision = NoteRevision.objects.create(
+                        note=note,
+                        title=note.title,
+                        body=note.body,
+                        note_type=note.note_type,
+                        code_language=note.code_language,
+                        url=note.url,
+                        archived=note.archived,
+                        edited_by=request.user,
+                    )
+
+                    # Save the old tag associations.
+                    revision.tags.set(note.tags.all())
+
+                    # Now save the new values.
+                    form.save()
+            else:
+                form.save()
+
+            messages.success(
+                request,
+                "Note updated successfully.",
+            )
             return redirect("home")
+
     else:
-        form = NoteForm(instance=note, user=request.user)
+        form = NoteForm(
+            instance=note,
+            user=request.user,
+        )
 
     return render(
         request,
         "notes/note_form.html",
         {
-            "form":form,
-            "note":note
-        }
+            "form": form,
+            "note": note,
+        },
     )
+
 
 @login_required
 def note_delete(request, pk):

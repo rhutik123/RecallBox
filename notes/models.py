@@ -114,3 +114,52 @@ class NoteLink(models.Model):
                 raise ValidationError(
                     "You can only link notes owned by the same user."
                 )
+
+class NoteRevision(models.Model):
+    note = models.ForeignKey(
+        Note,
+        on_delete=models.CASCADE,
+        related_name="revisions"
+    )
+
+    title = models.CharField(max_length=200)
+    body = models.TextField()
+
+    note_type = models.CharField(
+        max_length=10,
+        choices=Note.NoteType.choices,
+    )
+
+    code_language = models.CharField(
+        max_length=50,
+        blank=True,
+    )
+
+    url = models.URLField(
+        max_length=2048,
+        blank=True
+    )
+
+    tags = models.ManyToManyField(
+        Tag,
+        blank=True,
+        related_name="note_revisions",
+    )
+
+    archived = models.BooleanField(default=False)
+
+    edited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="note_revisions"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.title} - revision of {self.note_id}"

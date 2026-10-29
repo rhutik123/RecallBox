@@ -13,4 +13,6 @@ urlpatterns = [
     path("tags/new/", views.tag_create, name="tag_create"),
     path("notes/<int:pk>/link/", views.note_link_create, name="note_link_create"),
     path("notes/<int:pk>/detail/", views.note_detail, name="note_detail"),
+    path("notes/<int:pk>/revisions/", views.note_revision_history, name="note_revision_history"),
+    path("notes/<int:pk>/revisions/<int:revision_id>/restore/", views.note_revision_restore, name="note_revision_restore",),
 ]
