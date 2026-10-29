@@ -194,6 +194,7 @@ def note_create(request):
 
 
 
+
 @login_required
 def note_update(request, pk):
     note = get_object_or_404(
@@ -212,22 +213,28 @@ def note_update(request, pk):
         if form.is_valid():
             if form.has_changed():
                 with transaction.atomic():
-                    # Capture the old version before updating the note.
+                    # Get the old values from the database.
+                    old_note = Note.objects.select_for_update().get(
+                        pk=note.pk,
+                        owner=request.user,
+                    )
+
+                    # Save the previous version.
                     revision = NoteRevision.objects.create(
-                        note=note,
-                        title=note.title,
-                        body=note.body,
-                        note_type=note.note_type,
-                        code_language=note.code_language,
-                        url=note.url,
-                        archived=note.archived,
+                        note=old_note,
+                        title=old_note.title,
+                        body=old_note.body,
+                        note_type=old_note.note_type,
+                        code_language=old_note.code_language,
+                        url=old_note.url,
+                        archived=old_note.archived,
                         edited_by=request.user,
                     )
 
-                    # Save the old tag associations.
-                    revision.tags.set(note.tags.all())
+                    # Preserve the previous tags.
+                    revision.tags.set(old_note.tags.all())
 
-                    # Now save the new values.
+                    # Save the submitted changes.
                     form.save()
             else:
                 form.save()
@@ -252,7 +259,6 @@ def note_update(request, pk):
             "note": note,
         },
     )
-
 
 @login_required
 def note_delete(request, pk):

@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Note, Tag, NoteLink
+from .models import Note, Tag, NoteLink, NoteRevision
 
 User = get_user_model()
 
@@ -135,11 +135,12 @@ class NoteTagTests(TestCase):
         self.assertEqual(note.tags.count(), 2)
 
 
+
 class NoteSearchTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-        username="searchuser",
-        password="test-password-123",
+            username="searchuser",
+            password="test-password-123",
         )
 
         Note.objects.create(
@@ -161,26 +162,30 @@ class NoteSearchTests(TestCase):
         )
 
         self.client.login(
-        username="searchuser",
-        password="test-password-123",
+            username="searchuser",
+            password="test-password-123",
         )
 
-        def test_search_finds_note_by_title(self):
-            response = self.client.get(reverse("home"), {"q", "web development"})
+    def test_search_finds_note_by_title(self):
+        response = self.client.get(
+            reverse("home"),
+            {"q": "Django guide"},
+        )
 
-            self.assertEqual(response.status_code, 200)
-            self.assertContains(response, "Django guide")
-            self.assertNotContains(response, "Shopping list")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Django guide")
+        self.assertNotContains(response, "Shopping list")
 
-        def test_search_with_no_matches(self):
-            response = self.client.get(
-                reverse("home"),
-                {"q": "something-that-does-not-exist"},
-            )
+    def test_search_with_no_matches(self):
+        response = self.client.get(
+            reverse("home"),
+            {"q": "something-that-does-not-exist"},
+        )
 
-            self.assertEqual(response.status_code, 200)
-            self.assertContains(response, "No matching notes")
-            self.assertNotContains(response, "Python tutorial")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No matching notes")
+        self.assertNotContains(response, "Python tutorial")
+
 
     def test_search_combined_with_note_type_and_tag(self):
         tag = Tag.objects.create(
@@ -477,6 +482,7 @@ class NoteLinkTests(TestCase):
         self.assertEqual(link.source_note, self.note_a)
         self.assertEqual(link.target_note, self.note_b)
 
+    
     def test_cannot_link_notes_owned_by_different_users(self):
         another_user = User.objects.create_user(
             username="anotheruser",
@@ -493,6 +499,12 @@ class NoteLinkTests(TestCase):
             source_note=self.note_a,
             target_note=another_note,
         )
+
+        from django.core.exceptions import ValidationError
+
+        with self.assertRaises(ValidationError):
+            link.full_clean()
+
 
     def test_cannot_link_note_to_itself(self):
         from django.db import IntegrityError, transaction
@@ -664,3 +676,194 @@ class NoteLinkViewTests(TestCase):
         self.assertIn("/login/", response.url)
 
         self.assertEqual(NoteLink.objects.count(), 0)
+
+
+class NoteRevisionTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="revisionuser",
+            password="test-password-123",
+        )
+        self.other_user = User.objects.create_user(
+            username="otherrevisionuser",
+            password="test-password-123",
+        )
+
+        self.note = Note.objects.create(
+            owner=self.user,
+            title="Original title",
+            body="Original body",
+            note_type=Note.NoteType.TEXT,
+        )
+
+        self.client.login(
+            username="revisionuser",
+            password="test-password-123",
+        )
+
+    def test_meaningful_edit_saves_previous_version(self):
+        response = self.client.post(
+            reverse("note_update", args=[self.note.pk]),
+            {
+                "title": "Updated title",
+                "body": "Updated body",
+                "note_type": "text",
+                "code_language": "",
+                "url": "",
+                "archived": False,
+                "tags": [],
+            },
+        )
+
+        self.assertRedirects(response, reverse("home"))
+
+        self.note.refresh_from_db()
+
+        self.assertEqual(self.note.title, "Updated title")
+        self.assertEqual(self.note.body, "Updated body")
+
+        revision = NoteRevision.objects.get(note=self.note)
+
+        print("Revision title:", revision.title)
+        print("Current title:", self.note.title)
+
+        self.assertEqual(revision.title, "Original title")
+        self.assertEqual(revision.body, "Original body")
+        self.assertEqual(revision.note_type, "text")
+        self.assertEqual(revision.edited_by, self.user)
+
+    def test_unchanged_edit_does_not_create_revision(self):
+        response = self.client.post(
+            reverse("note_update", args=[self.note.pk]),
+            {
+                "title": "Original title",
+                "body": "Original body",
+                "note_type": "text",
+                "code_language": "",
+                "url": "",
+                "archived": False,
+                "tags": [],
+            },
+        )
+
+        self.assertRedirects(response, reverse("home"))
+        self.assertEqual(NoteRevision.objects.count(), 0)
+
+    def test_user_cannot_view_another_users_revision_history(self):
+        response = self.client.get(
+            reverse(
+                "note_revision_history",
+                args=[self.note.pk],
+            )
+        )
+
+        # The logged-in user owns this note, so access is allowed.
+        self.assertEqual(response.status_code, 200)
+
+        other_note = Note.objects.create(
+            owner=self.other_user,
+            title="Private note",
+            body="Private content",
+        )
+
+        response = self.client.get(
+            reverse(
+                "note_revision_history",
+                args=[other_note.pk],
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_restore_preserves_current_version(self):
+        old_revision = NoteRevision.objects.create(
+            note=self.note,
+            title="Older title",
+            body="Older body",
+            note_type=Note.NoteType.TEXT,
+            edited_by=self.user,
+        )
+
+        # The note currently contains a newer version.
+        self.note.title = "Current title"
+        self.note.body = "Current body"
+        self.note.save()
+
+        response = self.client.post(
+            reverse(
+                "note_revision_restore",
+                args=[self.note.pk, old_revision.pk],
+            )
+        )
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "note_revision_history",
+                args=[self.note.pk],
+            ),
+        )
+
+        self.note.refresh_from_db()
+
+        # The selected older version becomes current.
+        self.assertEqual(self.note.title, "Older title")
+        self.assertEqual(self.note.body, "Older body")
+
+        # The version that was current is preserved.
+        self.assertTrue(
+            NoteRevision.objects.filter(
+                note=self.note,
+                title="Current title",
+                body="Current body",
+            ).exists()
+        )
+
+    def test_invalid_edit_does_not_create_revision(self):
+        response = self.client.post(
+            reverse("note_update", args=[self.note.pk]),
+            {
+                "title": "Invalid change",
+                "body": "Some content",
+                "note_type": "link",
+                "code_language": "",
+                "url": "",
+                "archived": False,
+                "tags": [],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(NoteRevision.objects.count(), 0)
+
+        self.note.refresh_from_db()
+        self.assertEqual(self.note.title, "Original title")
+
+    
+def test_user_cannot_restore_another_users_revision(self):
+    other_note = Note.objects.create(
+        owner=self.other_user,
+        title="Private note",
+        body="Private body",
+    )
+
+    revision = NoteRevision.objects.create(
+        note=other_note,
+        title="Old private title",
+        body="Old private body",
+        note_type=Note.NoteType.TEXT,
+        edited_by=self.other_user,
+    )
+
+    response = self.client.post(
+        reverse(
+            "note_revision_restore",
+            args=[other_note.pk, revision.pk],
+        )
+    )
+
+    self.assertEqual(response.status_code, 404)
+
+    other_note.refresh_from_db()
+    self.assertEqual(other_note.title, "Private note")
+    self.assertEqual(other_note.body, "Private body")
