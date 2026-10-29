@@ -1,0 +1,99 @@
+
+{% extends "notes/base.html" %}
+
+{% block title %}{{ note.title }} | RecallBox{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2 mb-0">{{ note.title }}</h1>
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'note_update' note.pk %}"
+               class="btn btn-outline-primary btn-sm">
+                Edit note
+            </a>
+
+            <a href="{% url 'home' %}"
+               class="btn btn-outline-secondary btn-sm">
+                Back to notes
+            </a>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <span class="badge text-bg-primary">
+            {{ note.get_note_type_display }}
+        </span>
+
+        {% if note.note_type == "code" and note.code_language %}
+            <span class="badge text-bg-secondary">
+                {{ note.code_language }}
+            </span>
+        {% endif %}
+    </div>
+
+    {% if note.note_type == "code" %}
+        <pre class="bg-light rounded p-3 text-wrap"><code>{{ note.body }}</code></pre>
+    {% else %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <p class="mb-0">{{ note.body }}</p>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if note.note_type == "link" and note.url %}
+        <p>
+            <a href="{{ note.url }}"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="btn btn-outline-primary">
+                Open external link
+            </a>
+        </p>
+    {% endif %}
+
+    <p class="text-secondary small">
+        Updated {{ note.updated_at|date:"M j, Y" }}
+    </p>
+
+    <div class="mb-4">
+        {% for tag in note.tags.all %}
+            <span class="badge text-bg-secondary">{{ tag.name }}</span>
+        {% empty %}
+            <span class="text-secondary small">No tags</span>
+        {% endfor %}
+    </div>
+
+    <hr>
+
+    <section class="mb-4">
+        <h2 class="h5">Outgoing links</h2>
+
+        {% for link in outgoing_links %}
+            <p>
+                <a href="{% url 'note_detail' link.target_note.pk %}">
+                    {{ link.target_note.title }}
+                </a>
+            </p>
+        {% empty %}
+            <p class="text-secondary">No outgoing links yet.</p>
+        {% endfor %}
+    </section>
+
+    <section>
+        <h2 class="h5">Backlinks</h2>
+
+        {% for link in incoming_links %}
+            <p>
+                <a href="{% url 'note_detail' link.source_note.pk %}">
+                    {{ link.source_note.title }}
+                </a>
+            </p>
+        {% empty %}
+            <p class="text-secondary">No backlinks yet.</p>
+        {% endfor %}
+    </section>
+</div>
+{% endblock %}

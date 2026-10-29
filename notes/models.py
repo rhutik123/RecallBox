@@ -71,3 +71,46 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class NoteLink(models.Model):
+    source_note = models.ForeignKey(
+        Note,
+        on_delete=models.CASCADE,
+        related_name="outgoing_links",
+    )
+
+    target_note = models.ForeignKey(
+        Note,
+        on_delete=models.CASCADE,
+        related_name="incoming_links",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["source_note", "target_note"],
+                name="unique_directional_note_link",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(source_note=models.F("target_note")),
+                name="prevent_note_self_link",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.source_note} → {self.target_note}"
+
+    def clean(self):
+        super().clean()
+
+        if self.source_note_id and self.target_note_id:
+            if self.source_note.owner_id != self.target_note.owner_id:
+                from django.core.exceptions import ValidationError
+
+                raise ValidationError(
+                    "You can only link notes owned by the same user."
+                )

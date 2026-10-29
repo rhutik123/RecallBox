@@ -3,10 +3,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 
-from .forms import NoteForm, RegisterForm, TagForm
-from .models import Note, Tag
+from .forms import NoteForm, RegisterForm, TagForm, NotelinkForm
+from .models import Note, Tag, NoteLink
 from django.db.models import Q
 from django.core.paginator import Paginator
+from django.db import IntegrityError, transaction
+from django.core.exceptions import ValidationError
+from django.db.models import Prefetch
 
 # Create your views here.
 
@@ -52,13 +55,58 @@ def home(request):
     elif archived_filter == "false":
         notes = notes.filter(archived=False)
 
+
+    notes = notes.prefetch_related(
+        Prefetch(
+            "outgoing_links",
+            queryset=NoteLink.objects.filter(
+                source_note__owner=request.user,
+                target_note__owner=request.user,
+            ).select_related("target_note"),
+            to_attr="visible_outgoing_links",
+        ),
+        Prefetch(
+            "incoming_links",
+            queryset=NoteLink.objects.filter(
+                source_note__owner=request.user,
+                target_note__owner=request.user,
+            ).select_related("source_note"),
+            to_attr="visible_incoming_links",
+        ),
+    )
     paginator = Paginator(notes, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
-
         
     return render(request, "notes/home.html", {"notes": notes, "tags":tags, "selected_tag":selected_tag, "search_query": search_query,"selected_type":selected_type, "note_types":Note.NoteType.choices, "archived_filter":archived_filter, "page_obj":page_obj},)
 
+@login_required
+def note_detail(request, pk):
+    note = get_object_or_404(
+        Note,
+        pk=pk,
+        owner=request.user,
+    )
+
+    outgoing_links = NoteLink.objects.filter(
+        source_note=note,
+        target_note__owner=request.user,
+    ).select_related("target_note")
+
+    incoming_links = NoteLink.objects.filter(
+        target_note=note,
+        source_note__owner=request.user,
+    ).select_related("source_note")
+
+    return render(
+        request,
+        "notes/note_detail.html",
+        {
+            "note": note,
+            "outgoing_links": outgoing_links,
+            "incoming_links": incoming_links,
+        },
+    )
 
 @login_required
 def note_create(request):
@@ -140,3 +188,62 @@ def tag_create(request):
 
     return render(request, "notes/tag_form.html", {"form":form})
 
+@login_required
+def note_link_create(request, pk):
+    source_note = get_object_or_404(
+        Note,
+        pk=pk,
+        owner=request.user,
+    )
+
+    if request.method == "POST":
+        form = NotelinkForm(
+            request.POST,
+            user=request.user,
+            source_note=source_note,
+        )
+
+        if form.is_valid():
+            link = form.save(commit=False)
+            link.source_note = source_note
+
+            try:
+                with transaction.atomic():
+                    link.full_clean()
+                    link.save()
+            except ValidationError as error:
+                if NoteLink.objects.filter(
+                    source_note=source_note,
+                    target_note=link.target_note,
+                ).exists():
+                    form.add_error(
+                        "target_note",
+                        "This link already exists.",
+                    )
+                else:
+                    form.add_error(None, error)
+            except IntegrityError:
+                form.add_error(
+                    "target_note",
+                    "This link already exists.",
+                )
+            else:
+                messages.success(
+                    request,
+                    "Note linked successfully.",
+                )
+                return redirect("home")
+    else:
+        form = NotelinkForm(
+            user=request.user,
+            source_note=source_note,
+        )
+
+    return render(
+        request,
+        "notes/note_link_form.html",
+        {
+            "form": form,
+            "source_note": source_note,
+        },
+    )

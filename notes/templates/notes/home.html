@@ -139,7 +139,12 @@
                         </span>
 
                         <h2 class="h5 card-title">
-                            {{ note.title }}
+                            <a
+                                href="{% url 'note_detail' note.pk %}"
+                                class="text-decoration-none text-dark"
+                            >
+                                {{ note.title }}
+                            </a>
                         </h2>
 
                         {% if note.note_type == "code" %}
@@ -179,7 +184,10 @@
                             >
                                 Edit note
                             </a>
-
+                            <a href="{% url 'note_link_create' note.pk %}"
+                                class="btn btn-outline-success btn-sm" >
+                                Link note
+                            </a>
                             <a
                                 href="{% url 'note_delete' note.pk %}"
                                 class="btn btn-outline-danger btn-sm"
@@ -194,6 +202,31 @@
                                 <span class="badge text-bg-secondary">
                                     {{ tag.name }}
                                 </span>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Related notes -->
+                        <div class="mt-3 border-top pt-3">
+                            <h3 class="h6">Outgoing links</h3>
+
+                            {% for link in note.visible_outgoing_links %}
+                                <div>
+                                    <span class="text-secondary">→</span>
+                                    {{ link.target_note.title }}
+                                </div>
+                            {% empty %}
+                                <p class="small text-secondary mb-2">No outgoing links yet.</p>
+                            {% endfor %}
+
+                            <h3 class="h6 mt-3">Backlinks</h3>
+
+                            {% for link in note.visible_incoming_links %}
+                                <div>
+                                    <span class="text-secondary">←</span>
+                                    {{ link.source_note.title }}
+                                </div>
+                            {% empty %}
+                                <p class="small text-secondary mb-0">No backlinks yet.</p>
                             {% endfor %}
                         </div>
 

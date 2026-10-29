@@ -11,4 +11,6 @@ urlpatterns = [
     path("notes/<int:pk>/edit/", views.note_update, name="note_update"),
     path("notes/<int:pk>/delete/", views.note_delete, name="note_delete"),
     path("tags/new/", views.tag_create, name="tag_create"),
+    path("notes/<int:pk>/link/", views.note_link_create, name="note_link_create"),
+    path("notes/<int:pk>/detail/", views.note_detail, name="note_detail"),
 ]

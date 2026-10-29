@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Note, Tag
+from .models import Note, Tag, NoteLink
 
 User = get_user_model()
 
@@ -447,3 +447,220 @@ class NoteFormTests(TestCase):
 
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data["code_language"], "")
+
+
+class NoteLinkTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="linktester",
+            password="test-password-123"
+        )
+
+        self.note_a = Note.objects.create(
+            owner = self.user,
+            title = "Note A",
+            body = "content for note A"
+        )
+
+        self.note_b = Note.objects.create(
+            owner = self.user,
+            title = "Note B",
+            body = "content for note B"
+        )
+
+    def test_create_directional_link(self):
+        link = NoteLink.objects.create(
+            source_note = self.note_a,
+            target_note = self.note_b,
+        )
+
+        self.assertEqual(link.source_note, self.note_a)
+        self.assertEqual(link.target_note, self.note_b)
+
+    def test_cannot_link_notes_owned_by_different_users(self):
+        another_user = User.objects.create_user(
+            username="anotheruser",
+            password="test-password-123",
+        )
+
+        another_note = Note.objects.create(
+            owner=another_user,
+            title="Another user's note",
+            body="Private content",
+        )
+
+        link = NoteLink(
+            source_note=self.note_a,
+            target_note=another_note,
+        )
+
+    def test_cannot_link_note_to_itself(self):
+        from django.db import IntegrityError, transaction
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                NoteLink.objects.create(
+                    source_note=self.note_a,
+                    target_note=self.note_a,
+                )
+
+    def test_cannot_create_duplicate_directional_link(self):
+        from django.db import IntegrityError, transaction
+
+        NoteLink.objects.create(
+            source_note=self.note_a,
+            target_note=self.note_b,
+        )
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                NoteLink.objects.create(
+                    source_note=self.note_a,
+                    target_note=self.note_b,
+                )
+
+    def test_reverse_directional_links_are_allowed(self):
+        NoteLink.objects.create(
+            source_note=self.note_a,
+            target_note=self.note_b,
+        )
+
+        reverse_link = NoteLink.objects.create(
+            source_note=self.note_b,
+            target_note=self.note_a,
+        )
+
+        self.assertEqual(reverse_link.source_note, self.note_b)
+        self.assertEqual(reverse_link.target_note, self.note_a)
+
+        self.assertEqual(NoteLink.objects.count(), 2)
+
+class NoteLinkViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="linkviewuser",
+            password="test-password-123",
+        )
+        self.other_user = User.objects.create_user(
+            username="otherlinkuser",
+            password="test-password-123",
+        )
+
+        self.source_note = Note.objects.create(
+            owner=self.user,
+            title="Source note",
+            body="Source content",
+        )
+        self.target_note = Note.objects.create(
+            owner=self.user,
+            title="Target note",
+            body="Target content",
+        )
+        self.other_note = Note.objects.create(
+            owner=self.other_user,
+            title="Another user's note",
+            body="Private content",
+        )
+
+        self.client.login(
+            username="linkviewuser",
+            password="test-password-123",
+        )
+
+    def test_user_can_create_link_between_own_notes(self):
+        response = self.client.post(
+            reverse(
+                "note_link_create",
+                args=[self.source_note.pk],
+            ),
+            {
+                "target_note": self.target_note.pk,
+            },
+        )
+
+        self.assertRedirects(response, reverse("home"))
+
+        self.assertTrue(
+            NoteLink.objects.filter(
+                source_note=self.source_note,
+                target_note=self.target_note,
+            ).exists()
+        )
+
+    def test_user_cannot_link_from_another_users_note(self):
+        response = self.client.post(
+            reverse(
+                "note_link_create",
+                args=[self.other_note.pk],
+            ),
+            {
+                "target_note": self.target_note.pk,
+            },
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+        self.assertEqual(NoteLink.objects.count(), 0)
+
+    def test_user_cannot_link_to_another_users_note(self):
+        response = self.client.post(
+            reverse(
+                "note_link_create",
+                args=[self.source_note.pk],
+            ),
+            {
+                "target_note": self.other_note.pk,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertFalse(
+            NoteLink.objects.filter(
+                source_note=self.source_note,
+                target_note=self.other_note,
+            ).exists()
+        )
+
+    def test_duplicate_link_shows_form_error(self):
+        NoteLink.objects.create(
+            source_note=self.source_note,
+            target_note=self.target_note,
+        )
+
+        response = self.client.post(
+            reverse(
+                "note_link_create",
+                args=[self.source_note.pk],
+            ),
+            {
+                "target_note": self.target_note.pk,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(
+            response.context["form"],
+            "target_note",
+            "This link already exists.",
+        )
+
+        self.assertEqual(NoteLink.objects.count(), 1)    
+
+    def test_unauthenticated_user_cannot_create_link(self):
+        self.client.logout()
+
+        response = self.client.post(
+            reverse(
+                "note_link_create",
+                args=[self.source_note.pk],
+            ),
+            {
+                "target_note": self.target_note.pk,
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+        self.assertEqual(NoteLink.objects.count(), 0)

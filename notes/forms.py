@@ -1,5 +1,5 @@
 from django import forms
-from .models import Note, Tag
+from .models import Note, Tag, NoteLink
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import get_user_model
 
@@ -67,3 +67,25 @@ class TagForm(forms.ModelForm):
     def clean_name(self):
         name = self.cleaned_data["name"]
         return name.strip()
+
+class NotelinkForm(forms.ModelForm):
+    class Meta:
+        model = NoteLink
+        fields = ["target_note"]
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        source_note = kwargs.pop("source_note", None)
+        super().__init__(*args, **kwargs)
+
+        if user is not None:
+            self.fields["target_note"].queryset = Note.objects.filter(
+                owner=user
+            )
+        else:
+            self.fields["target_note"].queryset = Note.objects.none()
+
+        if source_note is not None:
+            self.fields["target_note"].queryset = (
+                self.fields["target_note"].queryset.exclude(pk=source_note.pk)
+            )
