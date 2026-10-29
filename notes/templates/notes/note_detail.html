@@ -5,71 +5,94 @@
 
 {% block content %}
 <div class="container py-4">
+
+    <!-- Note heading and action buttons -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h2 mb-0">{{ note.title }}</h1>
+        <h2>{{ note.title }}</h2>
 
         <div class="d-flex gap-2">
             <a href="{% url 'note_update' note.pk %}"
-               class="btn btn-outline-primary btn-sm">
+               class="btn btn-outline-primary">
                 Edit note
             </a>
 
             <a href="{% url 'home' %}"
-               class="btn btn-outline-secondary btn-sm">
+               class="btn btn-outline-secondary">
                 Back to notes
             </a>
+
+            <form method="post"
+                  action="{% url 'note_delete' note.pk %}"
+                  class="d-inline"
+                  onsubmit="return confirm('Are you sure you want to delete this note? This action cannot be undone.');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger">
+                    Delete note
+                </button>
+            </form>
         </div>
     </div>
 
+    <!-- Note type -->
     <div class="mb-3">
-        <span class="badge text-bg-primary">
-            {{ note.get_note_type_display }}
-        </span>
-
-        {% if note.note_type == "code" and note.code_language %}
-            <span class="badge text-bg-secondary">
-                {{ note.code_language }}
-            </span>
+        {% if note.note_type == "code" %}
+            <span class="badge bg-primary">Code</span>
+        {% elif note.note_type == "link" %}
+            <span class="badge bg-success">Link</span>
+        {% else %}
+            <span class="badge bg-secondary">Text</span>
         {% endif %}
     </div>
 
-    {% if note.note_type == "code" %}
-        <pre class="bg-light rounded p-3 text-wrap"><code>{{ note.body }}</code></pre>
-    {% else %}
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-body">
-                <p class="mb-0">{{ note.body }}</p>
-            </div>
-        </div>
+    <!-- Code language -->
+    {% if note.note_type == "code" and note.code_language %}
+        <p class="text-secondary">
+            Language: {{ note.code_language }}
+        </p>
     {% endif %}
 
+    <!-- Note content -->
+    <div class="mb-4">
+        {% if note.note_type == "code" %}
+            <pre class="p-3 bg-light border rounded"><code>{{ note.body }}</code></pre>
+        {% else %}
+            <div style="white-space: pre-wrap;">{{ note.body }}</div>
+        {% endif %}
+    </div>
+
+    <!-- External URL -->
     {% if note.note_type == "link" and note.url %}
-        <p>
+        <div class="mb-4">
             <a href="{{ note.url }}"
                target="_blank"
                rel="noopener noreferrer"
                class="btn btn-outline-primary">
-                Open external link
+                Open link
             </a>
-        </p>
+        </div>
     {% endif %}
 
+    <!-- Last updated -->
     <p class="text-secondary small">
-        Updated {{ note.updated_at|date:"M j, Y" }}
+        Updated {{ note.updated_at|date:"M d, Y" }}
     </p>
 
-    <div class="mb-4">
-        {% for tag in note.tags.all %}
-            <span class="badge text-bg-secondary">{{ tag.name }}</span>
-        {% empty %}
-            <span class="text-secondary small">No tags</span>
-        {% endfor %}
-    </div>
+    <!-- Tags -->
+    {% if note.tags.exists %}
+        <div class="mb-4">
+            {% for tag in note.tags.all %}
+                <span class="badge bg-secondary me-1">
+                    {{ tag.name }}
+                </span>
+            {% endfor %}
+        </div>
+    {% endif %}
 
     <hr>
 
+    <!-- Outgoing links -->
     <section class="mb-4">
-        <h2 class="h5">Outgoing links</h2>
+        <h4>Outgoing links</h4>
 
         {% for link in outgoing_links %}
             <p>
@@ -82,8 +105,9 @@
         {% endfor %}
     </section>
 
-    <section>
-        <h2 class="h5">Backlinks</h2>
+    <!-- Backlinks -->
+    <section class="mb-4">
+        <h4>Backlinks</h4>
 
         {% for link in incoming_links %}
             <p>
@@ -95,5 +119,6 @@
             <p class="text-secondary">No backlinks yet.</p>
         {% endfor %}
     </section>
+
 </div>
 {% endblock %}
