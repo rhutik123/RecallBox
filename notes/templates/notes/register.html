@@ -1,29 +1,269 @@
+
 {% extends "notes/base.html" %}
 
-{% block title %}Register | RecallBox{% endblock %}
+{% block title %}Create Account | RecallBox{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-4">
-                <h1 class="h3 mb-4">Create your account</h1>
 
-                <form method="post">
-                    {% csrf_token %}
-                    {{ form.as_p }}
+<style>
+    /* RecallBox registration page */
 
-                    <button type="submit" class="btn btn-primary w-100">
-                        Register
-                    </button>
-                </form>
+    .rb-register-page {
+        width: 100%;
+        max-width: 440px;
+        margin: 0 auto;
+    }
 
-                <p class="mt-3 mb-0">
-                    Already registered?
-                    <a href="{% url 'login' %}">Log in</a>
-                </p>
-            </div>
+    .rb-register-intro {
+        margin-bottom: 30px;
+    }
+
+    .rb-register-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 7px 12px;
+        margin-bottom: 18px;
+        border: 1px solid rgba(151, 119, 246, 0.25);
+        border-radius: 30px;
+        background: rgba(151, 119, 246, 0.10);
+        color: #a98cff;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .rb-register-intro h1 {
+        margin-bottom: 9px;
+        font-size: clamp(27px, 4vw, 32px);
+        font-weight: 700;
+        letter-spacing: -1px;
+    }
+
+    .rb-register-intro p {
+        color: var(--text-secondary);
+        font-size: 14px;
+        line-height: 1.7;
+    }
+
+    .rb-register-form {
+        width: 100%;
+    }
+
+    .rb-register-field {
+        width: 100%;
+        margin-bottom: 21px;
+    }
+
+    .rb-register-field label {
+        display: block !important;
+        width: 100%;
+        margin-bottom: 9px;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .rb-register-field input {
+        display: block !important;
+        width: 100% !important;
+        max-width: none !important;
+        min-height: 47px;
+        padding: 11px 14px;
+        border: 1px solid var(--border-strong);
+        border-radius: 10px;
+        background: var(--input-bg);
+        color: var(--text);
+        font-family: inherit;
+        font-size: 14px;
+        box-shadow: none;
+        transition: border-color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .rb-register-field input:focus {
+        outline: none;
+        border-color: #9875f5;
+        box-shadow: 0 0 0 3px rgba(152, 117, 245, 0.15);
+    }
+
+    .rb-register-field input::placeholder {
+        color: var(--text-muted);
+    }
+
+    .rb-register-hint {
+        display: block;
+        margin-top: 8px;
+        color: var(--text-muted);
+        font-size: 11px;
+        line-height: 1.6;
+    }
+
+    .rb-register-errors {
+        margin-top: 8px;
+        color: #ff788b;
+        font-size: 12px;
+        line-height: 1.6;
+    }
+
+    .rb-register-errors ul {
+        margin-bottom: 0;
+        padding-left: 17px;
+    }
+
+    .rb-register-submit {
+        width: 100%;
+        min-height: 49px;
+        margin-top: 5px;
+        border: 0;
+        border-radius: 10px;
+        background: #8965e9;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 650;
+        transition: background 180ms ease, transform 180ms ease;
+    }
+
+    .rb-register-submit:hover {
+        background: #9979f2;
+        color: #fff;
+        transform: translateY(-1px);
+    }
+
+    .rb-register-footer {
+        margin-top: 25px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 13px;
+    }
+
+    .rb-register-footer a {
+        color: #a98cff;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .rb-register-footer a:hover {
+        color: #beaaff;
+        text-decoration: underline;
+    }
+
+    @media (max-width: 480px) {
+        .rb-register-page {
+            max-width: 100%;
+        }
+
+        .rb-register-intro {
+            margin-bottom: 24px;
+        }
+    }
+</style>
+
+<div class="rb-register-page">
+
+    <!-- Introduction -->
+    <div class="rb-register-intro">
+
+        <div class="rb-register-eyebrow">
+            <i class="bi bi-stars"></i>
+            Your knowledge space starts here
         </div>
+
+        <h1>Create your space.</h1>
+
+        <p class="mb-0">
+            A home for your ideas, code snippets and everything
+            worth remembering.
+        </p>
+
     </div>
+
+    <!-- Registration form -->
+    <form method="post" class="rb-register-form" novalidate>
+
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger mb-4">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <!-- Username -->
+        <div class="rb-register-field">
+
+            <label for="{{ form.username.id_for_label }}">
+                Username
+            </label>
+
+            {{ form.username }}
+
+            {% if form.username.errors %}
+                <div class="rb-register-errors">
+                    {{ form.username.errors }}
+                </div>
+            {% endif %}
+
+        </div>
+
+        <!-- Password -->
+        <div class="rb-register-field">
+
+            <label for="{{ form.password1.id_for_label }}">
+                Password
+            </label>
+
+            {{ form.password1 }}
+
+            <span class="rb-register-hint">
+                Use at least 8 characters and avoid commonly used passwords.
+            </span>
+
+            {% if form.password1.errors %}
+                <div class="rb-register-errors">
+                    {{ form.password1.errors }}
+                </div>
+            {% endif %}
+
+        </div>
+
+        <!-- Confirm password -->
+        <div class="rb-register-field">
+
+            <label for="{{ form.password2.id_for_label }}">
+                Confirm password
+            </label>
+
+            {{ form.password2 }}
+
+            {% if form.password2.errors %}
+                <div class="rb-register-errors">
+                    {{ form.password2.errors }}
+                </div>
+            {% endif %}
+
+        </div>
+
+        {% if form.non_field_errors %}
+            <div class="rb-register-errors mb-3">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <!-- Submit -->
+        <button type="submit" class="rb-register-submit">
+            Create account
+            <i class="bi bi-arrow-right ms-2"></i>
+        </button>
+
+    </form>
+
+    <!-- Login link -->
+    <div class="rb-register-footer">
+        Already have an account?
+        <a href="{% url 'login' %}">Sign in</a>
+    </div>
+
 </div>
+
 {% endblock %}

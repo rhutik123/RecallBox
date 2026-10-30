@@ -1,28 +1,176 @@
+
 {% extends "notes/base.html" %}
 
 {% block title %}Create Tag | RecallBox{% endblock %}
 
+{% block page_heading %}Manage tags{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-4">
-                <h1 class="h3 mb-4">Create a tag</h1>
 
-                <form method="post">
-                    {% csrf_token %}
-                    {{ form.as_p }}
+<div class="container-fluid px-0">
 
-                    <button type="submit" class="btn btn-primary">
-                        Save tag
-                    </button>
-                    <a href="{% url 'home' %}"
-                       class="btn btn-outline-secondary ms-2">
-                        Cancel
-                    </a>
-                </form>
-            </div>
-        </div>
+    <!-- Breadcrumb -->
+    <div class="d-flex align-items-center gap-2 small text-secondary mb-4">
+        <a href="{% url 'home' %}" class="text-decoration-none">
+            Workspace
+        </a>
+        <span>/</span>
+        <span>Create tag</span>
     </div>
+
+    <!-- Introduction -->
+    <div class="mb-4">
+        <span class="badge rounded-pill text-bg-primary mb-2">
+            <i class="bi bi-tags me-1"></i>
+            Organisation
+        </span>
+
+        <h1 class="h3 fw-semibold mb-2">Create a tag</h1>
+
+        <p class="text-secondary mb-0">
+            Give your notes a little structure. Create a tag to group
+            related ideas, snippets and resources.
+        </p>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Form -->
+        <div class="col-lg-7 col-xl-6">
+
+            <div class="card border-0 shadow-sm rb-tag-form">
+                <div class="card-body p-4">
+
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        <div class="rb-pill">
+                            <i class="bi bi-tag"></i>
+                        </div>
+
+                        <div>
+                            <h2 class="h6 fw-semibold mb-1">
+                                Tag details
+                            </h2>
+                            <p class="small text-secondary mb-0">
+                                Choose a short, recognisable name.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <div class="mb-4">
+                            <label for="{{ form.name.id_for_label }}"
+                                   class="form-label fw-semibold">
+                                Tag name
+                            </label>
+
+                            {{ form.name }}
+
+                            {% if form.name.help_text %}
+                                <div class="form-text">
+                                    {{ form.name.help_text }}
+                                </div>
+                            {% endif %}
+
+                            {% if form.name.errors %}
+                                <div class="text-danger small mt-2">
+                                    {{ form.name.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex flex-wrap justify-content-between
+                                    align-items-center gap-3 pt-3 border-top">
+
+                            <a href="{% url 'home' %}"
+                               class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-plus-lg me-1"></i>
+                                Save tag
+                            </button>
+
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Helpful information -->
+        <div class="col-lg-5 col-xl-4">
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body p-4">
+
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-lightbulb text-primary"></i>
+                        <h2 class="h6 fw-semibold mb-0">
+                            Tagging tips
+                        </h2>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="small fw-semibold mb-1">
+                            Keep names simple
+                        </div>
+                        <p class="small text-secondary mb-0">
+                            Use names that are easy to recognise and remember.
+                        </p>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="small fw-semibold mb-1">
+                            Group related knowledge
+                        </div>
+                        <p class="small text-secondary mb-0">
+                            For example, Django, Python, Backend or Learning.
+                        </p>
+                    </div>
+
+                    <div>
+                        <div class="small fw-semibold mb-1">
+                            Reuse existing tags
+                        </div>
+                        <p class="small text-secondary mb-0">
+                            Reusing tags keeps your workspace organised
+                            and avoids unnecessary duplicates.
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="bi bi-shield-check text-success"></i>
+                        <h2 class="h6 fw-semibold mb-0">
+                            Your private tags
+                        </h2>
+                    </div>
+
+                    <p class="small text-secondary mb-0">
+                        Tags you create belong to your account.
+                        They help organise your own notes.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
 </div>
+
 {% endblock %}

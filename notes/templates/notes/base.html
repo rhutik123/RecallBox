@@ -1,60 +1,2021 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}RecallBox{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <meta name="theme-color" content="#111116">
 
-<body class="bg-light">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="{% url 'home' %}">
-                RecallBox
+    <title>{% block title %}RecallBox{% endblock %}</title>
+
+    <!-- Load saved theme before rendering -->
+    <script>
+        (function () {
+            try {
+                const saved = localStorage.getItem("recallbox-theme");
+                document.documentElement.dataset.theme =
+                    saved === "light" ? "light" : "dark";
+            } catch (error) {
+                document.documentElement.dataset.theme = "dark";
+            }
+        })();
+    </script>
+
+    <!-- Bootstrap -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <!-- Bootstrap Icons -->
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    >
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet"
+    >
+
+    {% block extra_head %}{% endblock %}
+
+    <style>
+        /* =====================================================
+           01. DESIGN TOKENS
+        ===================================================== */
+
+        :root {
+            --font-main: "DM Sans", sans-serif;
+            --font-display: "Space Grotesk", sans-serif;
+            --font-code: "JetBrains Mono", monospace;
+
+            --accent: #a18af7;
+            --accent-strong: #876be9;
+            --accent-soft: rgba(161, 138, 247, 0.13);
+            --accent-border: rgba(161, 138, 247, 0.28);
+
+            --green: #65c9a3;
+            --orange: #e9ad73;
+            --red: #ed818c;
+            --blue: #78b8eb;
+
+            --sidebar-width: 248px;
+            --topbar-height: 68px;
+            --transition: 180ms ease;
+        }
+
+        html[data-theme="dark"] {
+            color-scheme: dark;
+
+            --page: #111116;
+            --surface: #181820;
+            --surface-2: #1e1e28;
+            --surface-3: #252531;
+            --surface-hover: #292936;
+
+            --text: #f0eff7;
+            --text-secondary: #b3b0c2;
+            --text-muted: #858194;
+
+            --border: rgba(255, 255, 255, 0.075);
+            --border-strong: rgba(255, 255, 255, 0.13);
+
+            --input-bg: #14141b;
+            --code-bg: #101018;
+            --code-text: #e8e4f5;
+
+            --glass: rgba(24, 24, 32, 0.88);
+
+            --shadow: 0 18px 55px rgba(0, 0, 0, 0.24);
+            --shadow-small: 0 5px 20px rgba(0, 0, 0, 0.16);
+
+            --grid-line: rgba(255, 255, 255, 0.035);
+        }
+
+        html[data-theme="light"] {
+            color-scheme: light;
+
+            /* Soft lavender-grey canvas instead of a stark white page */
+            --page: #f0eef5;
+
+            /* Cards stay light, but are gently separated from the canvas */
+            --surface: #f8f7fb;
+            --surface-2: #f3f0f7;
+            --surface-3: #eae6f1;
+            --surface-hover: #eeebf4;
+
+            --text: #282638;
+            --text-secondary: #625d73;
+            --text-muted: #858095;
+
+            --border: rgba(57, 48, 84, 0.09);
+            --border-strong: rgba(57, 48, 84, 0.16);
+
+            /* Inputs have a soft inset tone, not pure white */
+            --input-bg: #f4f1f8;
+            --code-bg: #ebe7f2;
+            --code-text: #302b43;
+
+            /* Sidebar and topbar use a slightly deeper tinted glass */
+            --glass: rgba(233, 230, 240, 0.94);
+
+            --shadow: 0 18px 55px rgba(48, 38, 90, 0.075);
+            --shadow-small: 0 5px 20px rgba(48, 38, 90, 0.045);
+
+            --grid-line: rgba(57, 48, 84, 0.035);
+        }
+
+
+        /* =====================================================
+           02. GLOBAL STYLES
+        ===================================================== */
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        html {
+            min-width: 320px;
+            scroll-behavior: smooth;
+            scrollbar-color: var(--text-muted) var(--page);
+        }
+
+        body {
+            min-width: 320px;
+            min-height: 100vh;
+            margin: 0;
+            color: var(--text);
+            background: var(--page);
+            font-family: var(--font-main);
+            font-size: 14px;
+            line-height: 1.65;
+            overflow-x: hidden;
+            transition:
+                color var(--transition),
+                background-color var(--transition);
+        }
+
+        body,
+        button,
+        input,
+        select,
+        textarea {
+            font-family: var(--font-main);
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color var(--transition);
+        }
+
+        a:hover {
+            color: var(--accent-strong);
+        }
+
+        img,
+        video,
+        iframe {
+            max-width: 100%;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            max-width: 100%;
+        }
+
+        :focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 3px;
+        }
+
+        ::selection {
+            color: white;
+            background: #8066d9;
+        }
+
+
+        /* =====================================================
+           03. BRAND
+        ===================================================== */
+
+        .rb-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 11px;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .rb-brand:hover {
+            color: var(--text);
+        }
+
+        .rb-brand-mark {
+            display: grid;
+            width: 39px;
+            height: 39px;
+            flex-shrink: 0;
+            place-items: center;
+            color: white;
+            background: linear-gradient(145deg, #b29cff, #795edb);
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(139, 109, 228, 0.28);
+            font-size: 19px;
+        }
+
+        .rb-brand-name {
+            display: block;
+            font-family: var(--font-display);
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: -0.8px;
+            line-height: 1.2;
+        }
+
+        .rb-brand-caption {
+            display: block;
+            margin-top: 3px;
+            color: var(--text-muted);
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 1.3px;
+            text-transform: uppercase;
+        }
+
+
+        /* =====================================================
+           04. THEME TOGGLE
+        ===================================================== */
+
+        .rb-theme-toggle {
+            display: inline-grid;
+            width: 39px;
+            height: 39px;
+            flex-shrink: 0;
+            place-items: center;
+            color: var(--text-secondary);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all var(--transition);
+        }
+
+        .rb-theme-toggle:hover {
+            color: var(--accent);
+            background: var(--surface-hover);
+            border-color: var(--accent-border);
+            transform: rotate(8deg);
+        }
+
+
+        /* =====================================================
+           05. PUBLIC / AUTHENTICATION LAYOUT
+        ===================================================== */
+
+        .rb-public {
+            display: grid;
+            grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+            min-height: 100vh;
+            background: var(--page);
+        }
+
+        .rb-public-story {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-width: 0;
+            min-height: 100vh;
+            padding: clamp(28px, 5vw, 72px);
+            overflow: hidden;
+            background:
+                radial-gradient(
+                    ellipse at 20% 15%,
+                    rgba(136, 108, 226, 0.16),
+                    transparent 42%
+                ),
+                radial-gradient(
+                    ellipse at 85% 85%,
+                    rgba(90, 112, 190, 0.09),
+                    transparent 40%
+                ),
+                var(--surface);
+            border-right: 1px solid var(--border);
+        }
+
+        .rb-public-story::before {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            background-image:
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 44px 44px;
+            mask-image: linear-gradient(
+                to bottom,
+                rgba(0, 0, 0, 0.75),
+                transparent 85%
+            );
+            content: "";
+            pointer-events: none;
+        }
+
+        .rb-public-story > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .rb-public-story-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .rb-public-story-content {
+            width: 100%;
+            max-width: 650px;
+            margin: 55px auto;
+        }
+
+        .rb-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 11px;
+            color: var(--accent);
+            background: var(--accent-soft);
+            border: 1px solid var(--accent-border);
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .rb-eyebrow-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(101, 201, 163, 0.6);
+        }
+
+        .rb-public-heading {
+            max-width: 620px;
+            margin: 25px 0 18px;
+            font-family: var(--font-display);
+            font-size: clamp(38px, 5vw, 65px);
+            font-weight: 700;
+            line-height: 1.08;
+            letter-spacing: -3px;
+        }
+
+        .rb-gradient-text {
+            color: var(--accent);
+            background: linear-gradient(110deg, #b7a4ff, #9275ef 65%, #7c9de9);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .rb-public-description {
+            max-width: 470px;
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.9;
+        }
+
+        .rb-preview {
+            width: 100%;
+            max-width: 490px;
+            margin: 45px 0 20px;
+            padding: 17px;
+            background: var(--glass);
+            border: 1px solid var(--border-strong);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            transform: rotate(-1deg);
+        }
+
+        .rb-preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding-bottom: 13px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .rb-preview-dots {
+            display: flex;
+            gap: 5px;
+        }
+
+        .rb-preview-dots span {
+            width: 7px;
+            height: 7px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            opacity: 0.6;
+        }
+
+        .rb-preview-label {
+            color: var(--text-muted);
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .rb-preview-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 13px 3px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .rb-preview-note:last-child {
+            padding-bottom: 2px;
+            border-bottom: 0;
+        }
+
+        .rb-preview-icon {
+            display: grid;
+            width: 33px;
+            height: 33px;
+            flex-shrink: 0;
+            place-items: center;
+            color: var(--accent);
+            background: var(--accent-soft);
+            border-radius: 9px;
+            font-size: 14px;
+        }
+
+        .rb-preview-note-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .rb-preview-note-title {
+            color: var(--text);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .rb-preview-note-description {
+            margin-top: 2px;
+            color: var(--text-muted);
+            font-size: 10px;
+            overflow-wrap: anywhere;
+        }
+
+        .rb-preview-tag {
+            display: inline-block;
+            margin-top: 5px;
+            padding: 2px 7px;
+            color: var(--accent);
+            background: var(--accent-soft);
+            border-radius: 5px;
+            font-size: 9px;
+        }
+
+        .rb-public-footer {
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        .rb-public-auth {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+            min-height: 100vh;
+            padding: clamp(22px, 5vw, 65px);
+            background: var(--page);
+        }
+
+        .rb-public-auth-top {
+            display: none;
+            width: 100%;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 35px;
+        }
+
+        .rb-auth-content {
+            width: 100%;
+            max-width: 420px;
+            min-width: 0;
+            margin: auto;
+        }
+
+        .rb-auth-content .card {
+            color: var(--text);
+            background: transparent;
+            border: 0;
+            box-shadow: none !important;
+        }
+
+        .rb-auth-content .card-body {
+            padding: 0 !important;
+        }
+
+
+        /* =====================================================
+           06. AUTHENTICATED WORKSPACE
+        ===================================================== */
+
+        .rb-app {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        .rb-sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            z-index: 1030;
+            display: flex;
+            flex-direction: column;
+            width: var(--sidebar-width);
+            height: 100dvh;
+            padding: 24px 15px 17px;
+            overflow-x: hidden;
+            overflow-y: auto;
+            background: var(--glass);
+            border-right: 1px solid var(--border);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            transition: transform var(--transition);
+        }
+
+        .rb-sidebar-brand {
+            padding: 0 8px;
+            margin-bottom: 43px;
+        }
+
+        .rb-sidebar-label {
+            padding: 0 11px;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+        }
+
+        .rb-sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .rb-nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 42px;
+            padding: 9px 12px;
+            color: var(--text-secondary);
+            border: 1px solid transparent;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all var(--transition);
+        }
+
+        .rb-nav-link i {
+            width: 19px;
+            flex-shrink: 0;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .rb-nav-link:hover {
+            color: var(--text);
+            background: var(--surface-hover);
+        }
+
+        .rb-nav-link.active {
+            color: var(--accent);
+            background: var(--accent-soft);
+            border-color: var(--accent-border);
+        }
+
+        .rb-sidebar-spacer {
+            flex: 1;
+            min-height: 25px;
+        }
+
+        .rb-sidebar-bottom {
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+        }
+
+        .rb-account-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        .rb-account-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 11px;
+            color: var(--text-secondary);
+            border-radius: 9px;
+            font-size: 12px;
+        }
+
+        .rb-account-link:hover {
+            color: var(--text);
+            background: var(--surface-hover);
+        }
+
+        .rb-main-wrapper {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            min-width: 0;
+            min-height: 100vh;
+            margin-left: var(--sidebar-width);
+        }
+
+        .rb-topbar {
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            min-height: var(--topbar-height);
+            padding: 12px clamp(16px, 3vw, 38px);
+            background: var(--glass);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .rb-topbar-left,
+        .rb-topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            min-width: 0;
+        }
+
+        .rb-topbar-title {
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .rb-icon-button {
+            display: inline-grid;
+            width: 38px;
+            height: 38px;
+            flex-shrink: 0;
+            place-items: center;
+            color: var(--text-secondary);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+
+        .rb-icon-button:hover {
+            color: var(--accent);
+            background: var(--surface-hover);
+            border-color: var(--accent-border);
+        }
+
+        .rb-mobile-menu {
+            display: none;
+        }
+
+        .rb-page {
+            flex: 1;
+            width: 100%;
+            min-width: 0;
+            padding: clamp(18px, 3vw, 36px);
+        }
+
+        .rb-page-inner {
+            width: 100%;
+            max-width: 1600px;
+            min-width: 0;
+            margin: 0 auto;
+        }
+
+        .rb-footer {
+            padding: 17px 22px;
+            color: var(--text-muted);
+            text-align: center;
+            font-size: 11px;
+        }
+
+        .rb-sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1025;
+            display: none;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+        }
+
+        body.rb-sidebar-open .rb-sidebar-overlay {
+            display: block;
+        }
+
+
+        /* =====================================================
+           07. SHARED COMPONENTS
+        ===================================================== */
+
+        .rb-panel {
+            min-width: 0;
+            padding: 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: var(--shadow-small);
+        }
+
+        .rb-panel-hover {
+            transition: all var(--transition);
+        }
+
+        .rb-panel-hover:hover {
+            border-color: var(--accent-border);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .rb-section-title {
+            margin: 0;
+            color: var(--text);
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .rb-section-subtitle {
+            margin-top: 4px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .rb-muted {
+            color: var(--text-muted) !important;
+        }
+
+        .rb-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            max-width: 100%;
+            padding: 4px 9px;
+            color: var(--accent);
+            background: var(--accent-soft);
+            border: 1px solid var(--accent-border);
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            overflow-wrap: anywhere;
+        }
+
+
+        /* =====================================================
+           08. BUTTONS
+        ===================================================== */
+
+        .btn {
+            max-width: 100%;
+            border-radius: 9px;
+            font-weight: 600;
+            transition: all var(--transition);
+        }
+
+        .btn-primary {
+            color: #fff;
+            background: var(--accent-strong);
+            border-color: var(--accent-strong);
+        }
+
+        .btn-primary:hover,
+        .btn-primary:focus {
+            color: #fff;
+            background: #7055d0;
+            border-color: #7055d0;
+        }
+
+        .btn-outline-primary {
+            color: var(--accent);
+            border-color: var(--accent-border);
+        }
+
+        .btn-outline-primary:hover {
+            color: white;
+            background: var(--accent-strong);
+            border-color: var(--accent-strong);
+        }
+
+        .btn-outline-secondary {
+            color: var(--text-secondary);
+            border-color: var(--border-strong);
+        }
+
+        .btn-outline-secondary:hover {
+            color: var(--text);
+            background: var(--surface-hover);
+            border-color: var(--border-strong);
+        }
+
+
+        /* =====================================================
+           09. FORMS
+        ===================================================== */
+
+        .form-label {
+            color: var(--text);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .form-control,
+        .form-select {
+            width: 100%;
+            min-width: 0;
+            color: var(--text);
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-strong);
+            border-radius: 9px;
+            font-size: 13px;
+        }
+
+        .form-control::placeholder {
+            color: var(--text-muted);
+            opacity: 1;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            color: var(--text);
+            background-color: var(--input-bg);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+
+        .form-select option {
+            color: var(--text);
+            background: var(--surface);
+        }
+
+        .form-check-input {
+            background-color: var(--input-bg);
+            border-color: var(--border-strong);
+        }
+
+        .form-check-input:checked {
+            background-color: var(--accent-strong);
+            border-color: var(--accent-strong);
+        }
+
+        .form-check-label,
+        .form-text {
+            color: var(--text-secondary);
+        }
+
+        .invalid-feedback {
+            color: var(--red);
+        }
+
+
+        /* =====================================================
+           10. CODE BLOCKS
+        ===================================================== */
+
+        pre,
+        code,
+        kbd,
+        samp {
+            font-family: var(--font-code);
+        }
+
+        code {
+            color: var(--accent);
+            overflow-wrap: anywhere;
+        }
+
+        pre {
+            max-width: 100%;
+            padding: 16px;
+            overflow-x: auto;
+            color: var(--code-text);
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            font-size: 12px;
+            line-height: 1.8;
+            tab-size: 4;
+        }
+
+        pre code {
+            color: inherit;
+            background: transparent;
+            white-space: pre;
+            overflow-wrap: normal;
+        }
+
+        .token.comment,
+        .token.prolog,
+        .token.doctype {
+            color: #9293a5;
+        }
+
+        .token.keyword,
+        .token.selector {
+            color: #b6a0ff;
+        }
+
+        .token.string,
+        .token.attr-value {
+            color: #75cda0;
+        }
+
+        .token.function,
+        .token.class-name {
+            color: #edc07b;
+        }
+
+        .token.number,
+        .token.boolean {
+            color: #e7a1d0;
+        }
+
+        html[data-theme="light"] .token.comment,
+        html[data-theme="light"] .token.prolog {
+            color: #74758a;
+        }
+
+        html[data-theme="light"] .token.keyword,
+        html[data-theme="light"] .token.selector {
+            color: #6845bd;
+        }
+
+        html[data-theme="light"] .token.string,
+        html[data-theme="light"] .token.attr-value {
+            color: #16734b;
+        }
+
+        html[data-theme="light"] .token.function,
+        html[data-theme="light"] .token.class-name {
+            color: #99600b;
+        }
+
+        html[data-theme="light"] .token.number,
+        html[data-theme="light"] .token.boolean {
+            color: #a23d7b;
+        }
+
+
+        /* =====================================================
+           11. BOOTSTRAP THEME COMPATIBILITY
+        ===================================================== */
+
+        .card {
+            color: var(--text);
+            background-color: var(--surface);
+            border-color: var(--border);
+            border-radius: 14px;
+        }
+
+        .card-header,
+        .card-footer {
+            color: var(--text);
+            background-color: var(--surface-2);
+            border-color: var(--border);
+        }
+
+        .bg-light,
+        .bg-white {
+            background-color: var(--surface) !important;
+        }
+
+        .text-dark,
+        .text-body,
+        .text-light {
+            color: var(--text) !important;
+        }
+
+        .text-secondary {
+            color: var(--text-secondary) !important;
+        }
+
+        .border,
+        .border-top,
+        .border-bottom,
+        .border-start,
+        .border-end {
+            border-color: var(--border) !important;
+        }
+
+        .dropdown-menu {
+            color: var(--text);
+            background: var(--surface);
+            border-color: var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .dropdown-item {
+            color: var(--text-secondary);
+        }
+
+        .dropdown-item:hover,
+        .dropdown-item:focus {
+            color: var(--text);
+            background: var(--surface-hover);
+        }
+
+        .modal-content {
+            color: var(--text);
+            background: var(--surface);
+            border-color: var(--border);
+            border-radius: 14px;
+        }
+
+        .modal-header,
+        .modal-footer {
+            border-color: var(--border);
+        }
+
+        .alert {
+            color: var(--text);
+            background: var(--surface-2);
+            border-color: var(--border);
+        }
+
+        .alert-success {
+            border-left: 3px solid var(--green);
+        }
+
+        .alert-danger {
+            border-left: 3px solid var(--red);
+        }
+
+        .alert-warning {
+            border-left: 3px solid var(--orange);
+        }
+
+        .alert-info {
+            border-left: 3px solid var(--blue);
+        }
+
+        .btn-close {
+            filter: invert(1) grayscale(100%) brightness(180%);
+        }
+
+        html[data-theme="light"] .btn-close {
+            filter: none;
+        }
+
+        .table {
+            --bs-table-color: var(--text);
+            --bs-table-bg: transparent;
+            --bs-table-border-color: var(--border);
+            --bs-table-striped-color: var(--text);
+            --bs-table-striped-bg: var(--surface-2);
+            --bs-table-hover-color: var(--text);
+            --bs-table-hover-bg: var(--surface-hover);
+
+            color: var(--text);
+        }
+
+        .table th {
+            color: var(--text-secondary);
+        }
+
+        .list-group-item {
+            color: var(--text);
+            background: var(--surface);
+            border-color: var(--border);
+        }
+
+        .pagination {
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .page-link {
+            color: var(--text-secondary);
+            background: var(--surface);
+            border-color: var(--border);
+        }
+
+        .page-link:hover {
+            color: var(--accent);
+            background: var(--surface-hover);
+            border-color: var(--border);
+        }
+
+        .page-item.active .page-link {
+            color: white;
+            background: var(--accent-strong);
+            border-color: var(--accent-strong);
+        }
+
+
+        /* =====================================================
+           12. RESPONSIVE LAYOUT
+        ===================================================== */
+
+        @media (max-width: 1050px) {
+            .rb-public {
+                grid-template-columns: minmax(0, 1fr) minmax(340px, 0.9fr);
+            }
+
+            .rb-public-story,
+            .rb-public-auth {
+                padding: 35px;
+            }
+
+            .rb-public-heading {
+                font-size: clamp(36px, 5vw, 52px);
+            }
+        }
+
+        @media (max-width: 991.98px) {
+            .rb-sidebar {
+                width: min(285px, 85vw);
+                transform: translateX(-105%);
+                box-shadow: var(--shadow);
+            }
+
+            body.rb-sidebar-open .rb-sidebar {
+                transform: translateX(0);
+            }
+
+            body.rb-sidebar-open {
+                overflow: hidden;
+            }
+
+            .rb-main-wrapper {
+                margin-left: 0;
+            }
+
+            .rb-mobile-menu {
+                display: inline-grid;
+            }
+        }
+
+        @media (min-width: 992px) {
+            .rb-sidebar {
+                transform: translateX(0);
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .rb-public {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .rb-public-story {
+                min-height: auto;
+                padding: 24px 22px 28px;
+                border-right: 0;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .rb-public-story-content {
+                margin: 42px auto 10px;
+            }
+
+            .rb-public-heading {
+                max-width: 520px;
+                margin-top: 19px;
+                font-size: clamp(35px, 8vw, 49px);
+                letter-spacing: -2px;
+            }
+
+            .rb-public-description {
+                font-size: 14px;
+            }
+
+            .rb-preview {
+                max-width: 500px;
+                margin-top: 25px;
+            }
+
+            .rb-public-auth {
+                min-height: auto;
+                padding: 42px 22px 55px;
+            }
+
+            .rb-public-auth-top {
+                display: flex;
+            }
+
+            .rb-auth-content {
+                max-width: 480px;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .rb-public-story {
+                padding: 20px 18px 24px;
+            }
+
+            .rb-public-story-content {
+                margin-top: 34px;
+            }
+
+            .rb-public-heading {
+                font-size: 36px;
+                letter-spacing: -1.8px;
+            }
+
+            .rb-preview {
+                padding: 13px;
+                transform: none;
+            }
+
+            .rb-public-auth {
+                padding: 32px 19px 42px;
+            }
+
+            .rb-brand-name {
+                font-size: 17px;
+            }
+
+            .rb-topbar {
+                padding: 10px 13px;
+                gap: 8px;
+            }
+
+            .rb-page {
+                padding: 16px 12px;
+            }
+
+            .rb-panel {
+                padding: 15px;
+            }
+
+            .rb-topbar-left,
+            .rb-topbar-right {
+                gap: 7px;
+            }
+
+            .rb-footer {
+                padding: 15px 10px;
+            }
+        }
+
+        /* Prevent layout overflow at increased zoom */
+
+        .rb-page,
+        .rb-page-inner,
+        .rb-panel,
+        .rb-auth-content,
+        .rb-public-auth,
+        .rb-main-wrapper,
+        .card,
+        .card-body,
+        .row > *,
+        [class*="col-"] {
+            min-width: 0;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        p,
+        td,
+        th,
+        li {
+            overflow-wrap: break-word;
+        }
+
+        .table-responsive {
+            max-width: 100%;
+        }
+
+        /* Reduced motion */
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                scroll-behavior: auto !important;
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+
+        /* ==========================================
+        RECALLBOX — PREMIUM FORM SYSTEM
+        ========================================== */
+
+        .rb-note-form {
+            --rb-input-bg: #20202a;
+            --rb-input-border: #343442;
+            --rb-input-text: #f1eff8;
+            --rb-input-muted: #a5a1b5;
+            --rb-input-focus: #9875f5;
+        }
+
+        /* Light theme */
+        [data-theme="light"] .rb-note-form {
+            --rb-input-bg: #f4f1f8;
+            --rb-input-border: #dcd6e8;
+            --rb-input-text: #242132;
+            --rb-input-muted: #777187;
+            --rb-input-focus: #7651df;
+        }
+
+        /* General form controls */
+        .rb-note-form input:not([type="checkbox"]):not([type="radio"]),
+        .rb-note-form select,
+        .rb-note-form textarea {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            min-height: 46px;
+            padding: 12px 15px;
+
+            color: var(--rb-input-text) !important;
+            background-color: var(--rb-input-bg) !important;
+            border: 1px solid var(--rb-input-border) !important;
+            border-radius: 11px !important;
+
+            font-family: inherit;
+            font-size: 0.92rem;
+            line-height: 1.5;
+
+            box-shadow: none !important;
+
+            transition:
+                border-color 180ms ease,
+                background-color 180ms ease,
+                box-shadow 180ms ease;
+        }
+
+        /* Placeholder */
+        .rb-note-form input::placeholder,
+        .rb-note-form textarea::placeholder {
+            color: var(--rb-input-muted);
+            opacity: 0.8;
+        }
+
+        /* Focus */
+        .rb-note-form input:focus,
+        .rb-note-form select:focus,
+        .rb-note-form textarea:focus {
+            border-color: var(--rb-input-focus) !important;
+            box-shadow: 0 0 0 3px rgba(152, 117, 245, 0.15) !important;
+            outline: none;
+        }
+
+        /* Main writing area */
+        .rb-note-form textarea {
+            min-height: 260px;
+            resize: vertical;
+            line-height: 1.75;
+        }
+
+        /* Dropdown */
+        .rb-note-form select:not([multiple]) {
+            cursor: pointer;
+        }
+
+        /* Existing tags */
+        .rb-note-form select[multiple] {
+            min-height: 150px;
+            padding: 8px;
+            overflow-y: auto;
+        }
+
+        .rb-note-form select[multiple] option {
+            padding: 10px 12px;
+            margin-bottom: 3px;
+            border-radius: 7px;
+            color: var(--rb-input-text);
+            background-color: var(--rb-input-bg);
+        }
+
+        .rb-note-form select[multiple] option:checked {
+            color: #ffffff;
+            background: #7651df linear-gradient(#7651df, #7651df);
+        }
+
+        /* Labels */
+        .rb-note-form .form-label {
+            color: var(--bs-body-color);
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 9px;
+        }
+
+        /* Help text */
+        .rb-note-form .form-text {
+            color: var(--rb-input-muted);
+            font-size: 0.8rem;
+            line-height: 1.6;
+            margin-top: 8px;
+        }
+
+        /* Checkbox */
+        .rb-note-form input[type="checkbox"] {
+            width: 17px;
+            height: 17px;
+            accent-color: var(--rb-input-focus);
+        }
+
+        /* Validation */
+        .rb-note-form .text-danger,
+        .rb-note-form .errorlist {
+            color: #ff7185 !important;
+            font-size: 0.82rem;
+            margin-top: 7px;
+        }
+
+        /* Mobile */
+        @media (max-width: 576px) {
+            .rb-note-form textarea {
+                min-height: 200px;
+            }
+        }
+
+        
+        /* RecallBox tag form */
+        .rb-tag-form input[type="text"] {
+            display: block;
+            width: 100%;
+            min-height: 46px;
+            padding: 0.7rem 0.9rem;
+            color: var(--text);
+            background: var(--input-bg);
+            border: 1px solid var(--border-strong);
+            border-radius: 10px;
+            font: inherit;
+            font-size: 0.92rem;
+            transition: border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .rb-tag-form input[type="text"]:focus {
+            outline: none;
+            border-color: #9875f5;
+            box-shadow: 0 0 0 3px rgba(152, 117, 245, 0.15);
+        }
+
+                
+        /* Fix note form labels in dark and light themes */
+        label[for="id_title"],
+        label[for="id_note_type"],
+        label[for="id_body"],
+        label[for="id_code_language"],
+        label[for="id_url"],
+        label[for="id_tags"],
+        label[for="id_new_tags"],
+        label[for="id_archived"] {
+            color: var(--text) !important;
+            opacity: 1 !important;
+        }
+
+
+
+    </style>
+</head>
+
+<body>
+
+{% if user.is_authenticated %}
+
+<!-- =====================================================
+     AUTHENTICATED WORKSPACE
+===================================================== -->
+
+<div class="rb-app">
+
+    <aside class="rb-sidebar" id="rbSidebar">
+
+        <div class="rb-sidebar-brand">
+            <a href="{% url 'home' %}" class="rb-brand">
+
+                <span class="rb-brand-mark">
+                    <i class="bi bi-layers-half"></i>
+                </span>
+
+                <span>
+                    <span class="rb-brand-name">RecallBox</span>
+                    <span class="rb-brand-caption">Your knowledge space</span>
+                </span>
+
+            </a>
+        </div>
+
+        <div class="rb-sidebar-label">Workspace</div>
+
+        <nav class="rb-sidebar-nav" aria-label="Workspace navigation">
+
+            <a href="{% url 'home' %}" class="rb-nav-link active">
+                <i class="bi bi-grid-1x2"></i>
+                <span>My Workspace</span>
             </a>
 
-            <div class="d-flex align-items-center gap-3">
-                {% if user.is_authenticated %}
-                <span class="text-light">
-                    Hi, {{ user.username }}
-                </span>
+        </nav>
+
+        <div class="rb-sidebar-spacer"></div>
+
+        <div class="rb-sidebar-bottom">
+
+            <div class="rb-sidebar-label">Account</div>
+
+            <div class="rb-account-actions">
+
+                <div class="rb-account-link">
+                    <i class="bi bi-person-circle"></i>
+                    <span>{{ user.username }}</span>
+                </div>
 
                 <form method="post" action="{% url 'logout' %}" class="m-0">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-light btn-sm">
-                        Logout
+
+                    <button
+                        type="submit"
+                        class="rb-account-link w-100 text-start bg-transparent border-0"
+                    >
+                        <i class="bi bi-box-arrow-right"></i>
+                        <span>Sign out</span>
                     </button>
                 </form>
-                {% else %}
-                <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm">
-                    Login
-                </a>
-                <a href="{% url 'register' %}" class="btn btn-primary btn-sm">
-                    Register
-                </a>
-                {% endif %}
+
             </div>
-        </div>
-    </nav>
 
-    <main class="container py-5">
-        {% if messages %}
+        </div>
+
+    </aside>
+
+    <div
+        class="rb-sidebar-overlay"
+        id="rbSidebarOverlay"
+        aria-hidden="true"
+    ></div>
+
+    <div class="rb-main-wrapper">
+
+        <header class="rb-topbar">
+
+            <div class="rb-topbar-left">
+
+                <button
+                    type="button"
+                    class="rb-icon-button rb-mobile-menu"
+                    id="rbMenuToggle"
+                    aria-label="Open navigation"
+                    aria-controls="rbSidebar"
+                    aria-expanded="false"
+                >
+                    <i class="bi bi-list"></i>
+                </button>
+
+                <div class="rb-topbar-title">
+                    {% block page_heading %}My Workspace{% endblock %}
+                </div>
+
+            </div>
+
+            <div class="rb-topbar-right">
+
+                <button
+                    type="button"
+                    class="rb-theme-toggle"
+                    id="rbThemeToggle"
+                    aria-label="Switch theme"
+                    title="Switch theme"
+                >
+                    <i class="bi bi-sun-fill" id="rbThemeIcon"></i>
+                </button>
+
+            </div>
+
+        </header>
+
+        <main class="rb-page">
+            <div class="rb-page-inner">
+
+{% else %}
+
+<!-- =====================================================
+     PUBLIC / AUTHENTICATION LAYOUT
+===================================================== -->
+
+<div class="rb-public">
+
+    <section class="rb-public-story">
+
+        <div class="rb-public-story-top">
+
+            <a href="{% url 'login' %}" class="rb-brand">
+
+                <span class="rb-brand-mark">
+                    <i class="bi bi-layers-half"></i>
+                </span>
+
+                <span>
+                    <span class="rb-brand-name">RecallBox</span>
+                    <span class="rb-brand-caption">Your knowledge space</span>
+                </span>
+
+            </a>
+
+            <button
+                type="button"
+                class="rb-theme-toggle"
+                id="rbThemeToggle"
+                aria-label="Switch theme"
+                title="Switch theme"
+            >
+                <i class="bi bi-sun-fill" id="rbThemeIcon"></i>
+            </button>
+
+        </div>
+
+        <div class="rb-public-story-content">
+
+            <div class="rb-eyebrow">
+                <span class="rb-eyebrow-dot"></span>
+                A little more room for your brain
+            </div>
+
+            <h1 class="rb-public-heading">
+                Your brain has
+                <span class="rb-gradient-text">too many tabs</span>
+                open.
+            </h1>
+
+            <p class="rb-public-description">
+                Code snippets you swear you'll need later.
+                Articles you meant to read.
+                Ideas that show up at the worst possible time.
+                Give them all a home.
+            </p>
+
+            <div class="rb-preview">
+
+                <div class="rb-preview-header">
+
+                    <div class="rb-preview-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+
+                    <span class="rb-preview-label">
+                        A peek inside your knowledge space
+                    </span>
+
+                </div>
+
+                <div class="rb-preview-note">
+
+                    <div class="rb-preview-icon">
+                        <i class="bi bi-code-slash"></i>
+                    </div>
+
+                    <div class="rb-preview-note-content">
+
+                        <div class="rb-preview-note-title">
+                            Django ORM — useful queries
+                        </div>
+
+                        <div class="rb-preview-note-description">
+                            The queries you don't want to Google twice.
+                        </div>
+
+                        <span class="rb-preview-tag">Python</span>
+
+                    </div>
+
+                </div>
+
+                <div class="rb-preview-note">
+
+                    <div class="rb-preview-icon">
+                        <i class="bi bi-lightbulb"></i>
+                    </div>
+
+                    <div class="rb-preview-note-content">
+
+                        <div class="rb-preview-note-title">
+                            That project idea
+                        </div>
+
+                        <div class="rb-preview-note-description">
+                            Random thoughts are sometimes the good ones.
+                        </div>
+
+                        <span class="rb-preview-tag">Ideas</span>
+
+                    </div>
+
+                </div>
+
+                <div class="rb-preview-note">
+
+                    <div class="rb-preview-icon">
+                        <i class="bi bi-link-45deg"></i>
+                    </div>
+
+                    <div class="rb-preview-note-content">
+
+                        <div class="rb-preview-note-title">
+                            A really useful developer resource
+                        </div>
+
+                        <div class="rb-preview-note-description">
+                            Save the link. Future you will be grateful.
+                        </div>
+
+                        <span class="rb-preview-tag">Resources</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <p class="rb-public-description" style="font-size: 12px;">
+                Capture it now. Connect the dots later.
+            </p>
+
+        </div>
+
+        <footer class="rb-public-footer">
+            RecallBox
+            <span class="mx-2">·</span>
+            A personal space for everything worth keeping.
+        </footer>
+
+    </section>
+
+
+    <section class="rb-public-auth">
+
+        <div class="rb-public-auth-top">
+
+            <a href="{% url 'login' %}" class="rb-brand">
+
+                <span class="rb-brand-mark">
+                    <i class="bi bi-layers-half"></i>
+                </span>
+
+                <span class="rb-brand-name">RecallBox</span>
+
+            </a>
+
+            <span class="text-secondary small">
+                Welcome
+            </span>
+
+        </div>
+
+        <div class="rb-auth-content">
+
+{% endif %}
+
+
+<!-- =====================================================
+     THE SINGLE SHARED CONTENT BLOCK
+
+     Django permits only one block with each name.
+     This block is rendered inside the correct layout.
+===================================================== -->
+
+{% if messages %}
+    <div class="mb-4">
+
         {% for message in messages %}
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+
+            <div
+                class="alert alert-{{ message.tags|default:'success' }} alert-dismissible fade show"
+                role="alert"
+            >
+                {{ message }}
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
         {% endfor %}
-        {% endif %}
-        {% block content %}{% endblock %}
-    </main>
 
-    <footer class="container py-4 text-center text-secondary">
-        <small>RecallBox — your knowledge, organized.</small>
-    </footer>
+    </div>
+{% endif %}
+
+{% block content %}{% endblock %}
+
+
+<!-- =====================================================
+     CLOSE THE SELECTED LAYOUT
+===================================================== -->
+
+{% if user.is_authenticated %}
+
+            </div>
+        </main>
+
+        <footer class="rb-footer">
+            Made for the things worth remembering.
+            <span class="mx-1">·</span>
+            RecallBox
+        </footer>
+
+    </div>
+
+</div>
+
+{% else %}
+
+        </div>
+
+        <footer class="rb-public-footer text-center mt-5">
+            Built to keep the useful things close.
+        </footer>
+
+    </section>
+
+</div>
+
+{% endif %}
+
+
+<!-- Bootstrap JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+
+
+<script>
+    /* =====================================================
+       THEME SWITCHING
+    ===================================================== */
+
+    (function () {
+
+        const root = document.documentElement;
+        const buttons = document.querySelectorAll("#rbThemeToggle");
+        const icon = document.getElementById("rbThemeIcon");
+
+        function updateTheme(theme) {
+
+            root.dataset.theme = theme;
+
+            if (icon) {
+                icon.className = theme === "dark"
+                    ? "bi bi-sun-fill"
+                    : "bi bi-moon-stars-fill";
+            }
+
+            buttons.forEach(function (button) {
+
+                const label = theme === "dark"
+                    ? "Switch to light mode"
+                    : "Switch to dark mode";
+
+                button.setAttribute("aria-label", label);
+                button.setAttribute("title", label);
+
+            });
+
+            const themeColor = document.querySelector(
+                'meta[name="theme-color"]'
+            );
+
+            if (themeColor) {
+                themeColor.content = theme === "dark"
+                    ? "#111116"
+                    : "#f0eef5";
+            }
+
+        }
+
+        let currentTheme = root.dataset.theme || "dark";
+
+        updateTheme(currentTheme);
+
+        buttons.forEach(function (button) {
+
+            button.addEventListener("click", function () {
+
+                currentTheme = root.dataset.theme === "dark"
+                    ? "light"
+                    : "dark";
+
+                updateTheme(currentTheme);
+
+                try {
+                    localStorage.setItem(
+                        "recallbox-theme",
+                        currentTheme
+                    );
+                } catch (error) {
+                    // Theme remains functional for this page.
+                }
+
+            });
+
+        });
+
+    })();
+
+
+    /* =====================================================
+       MOBILE SIDEBAR
+    ===================================================== */
+
+    (function () {
+
+        const menuButton = document.getElementById("rbMenuToggle");
+        const overlay = document.getElementById("rbSidebarOverlay");
+
+        if (!menuButton) return;
+
+        function openSidebar() {
+
+            document.body.classList.add("rb-sidebar-open");
+
+            menuButton.setAttribute("aria-expanded", "true");
+            menuButton.setAttribute("aria-label", "Close navigation");
+
+        }
+
+        function closeSidebar() {
+
+            document.body.classList.remove("rb-sidebar-open");
+
+            menuButton.setAttribute("aria-expanded", "false");
+            menuButton.setAttribute("aria-label", "Open navigation");
+
+        }
+
+        menuButton.addEventListener("click", function () {
+
+            if (document.body.classList.contains("rb-sidebar-open")) {
+                closeSidebar();
+            } else {
+                openSidebar();
+            }
+
+        });
+
+        if (overlay) {
+            overlay.addEventListener("click", closeSidebar);
+        }
+
+        document.addEventListener("keydown", function (event) {
+
+            if (event.key === "Escape") {
+                closeSidebar();
+            }
+
+        });
+
+        window.addEventListener("resize", function () {
+
+            if (window.innerWidth > 991) {
+                closeSidebar();
+            }
+
+        });
+
+    })();
+
+</script>
+
 </body>
-
 </html>

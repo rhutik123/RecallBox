@@ -1,174 +1,344 @@
-```html
+
 {% extends "notes/base.html" %}
 
 {% block title %}
     {% if note %}Edit Note{% else %}Create Note{% endif %} | RecallBox
 {% endblock %}
 
+{% block page_heading %}
+    {% if note %}Edit note{% else %}Create a note{% endif %}
+{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-9 col-xl-8">
 
-        <div class="mb-4">
-            <a href="{% url 'home' %}" class="text-decoration-none text-muted small">
-                <i class="bi bi-arrow-left me-1"></i> Back to workspace
+<div class="container-fluid px-0">
+
+    <!-- Breadcrumb -->
+    <div class="d-flex align-items-center gap-2 small text-secondary mb-4">
+        <a href="{% url 'home' %}" class="text-decoration-none">
+            Workspace
+        </a>
+        <span>/</span>
+        {% if note %}
+            <a href="{% url 'note_detail' note.pk %}" class="text-decoration-none">
+                {{ note.title|truncatechars:30 }}
             </a>
+            <span>/</span>
+            <span>Edit</span>
+        {% else %}
+            <span>New note</span>
+        {% endif %}
+    </div>
 
-            <h1 class="h3 fw-bold mt-3 mb-2">
-                {% if note %}Edit your note{% else %}Create a new note{% endif %}
-            </h1>
-
-            <p class="text-muted mb-0">
-                {% if note %}
-                    Update your knowledge and keep everything organized.
-                {% else %}
-                    Capture an idea, save useful information, or store a code snippet.
-                {% endif %}
-            </p>
+    <!-- Page introduction -->
+    <div class="mb-4">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge rounded-pill text-bg-primary">
+                {% if note %}Update{% else %}New entry{% endif %}
+            </span>
+            <span class="small text-secondary">Personal knowledge base</span>
         </div>
 
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-4 p-md-5">
+        <h1 class="h3 fw-semibold mb-2">
+            {% if note %}
+                Refine your note
+            {% else %}
+                Capture a thought
+            {% endif %}
+        </h1>
 
-                <form method="post">
-                    {% csrf_token %}
+        <p class="text-secondary mb-0">
+            {% if note %}
+                Update your information and keep your knowledge organised.
+            {% else %}
+                Save an idea, code snippet, or useful resource before it gets lost.
+            {% endif %}
+        </p>
+    </div>
 
-                    {% if form.non_field_errors %}
-                        <div class="alert alert-danger">
-                            {{ form.non_field_errors }}
-                        </div>
-                    {% endif %}
+    <div class="row g-4">
 
-                    <!-- Basic information -->
-                    <div class="mb-4">
-                        <h2 class="h6 fw-bold mb-3">
-                            <i class="bi bi-pencil-square me-2"></i>
-                            Note information
-                        </h2>
+        <!-- Main form -->
+        <div class="col-lg-8">
 
-                        <div class="mb-3">
-                            <label for="{{ form.title.id_for_label }}" class="form-label fw-semibold">
-                                Title
-                            </label>
-                            {{ form.title }}
-                            {% for error in form.title.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
+            <div class="card border-0 shadow-sm rb-note-form">
+                <div class="card-body p-4">
 
-                        <div class="mb-3">
-                            <label for="{{ form.body.id_for_label }}" class="form-label fw-semibold">
-                                Content
-                            </label>
-                            {{ form.body }}
-                            {% for error in form.body.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
+                    <form method="post" novalidate>
+                        {% csrf_token %}
 
-                        <div class="mb-3">
-                            <label for="{{ form.note_type.id_for_label }}" class="form-label fw-semibold">
-                                Note type
-                            </label>
-                            {{ form.note_type }}
-                            {% for error in form.note_type.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.code_language.id_for_label }}" class="form-label fw-semibold">
-                                Programming language
-                            </label>
-                            {{ form.code_language }}
-                            {% if form.code_language.help_text %}
-                                <div class="form-text">{{ form.code_language.help_text }}</div>
-                            {% endif %}
-                            {% for error in form.code_language.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.url.id_for_label }}" class="form-label fw-semibold">
-                                External URL
-                            </label>
-                            {{ form.url }}
-                            {% if form.url.help_text %}
-                                <div class="form-text">{{ form.url.help_text }}</div>
-                            {% endif %}
-                            {% for error in form.url.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                    </div>
-
-                    <hr class="my-4">
-
-                    <!-- Tags -->
-                    <div class="mb-4">
-                        <h2 class="h6 fw-bold mb-2">
-                            <i class="bi bi-tags me-2"></i>
-                            Organize your note
-                        </h2>
-
-                        <div class="mb-3">
-                            <label for="{{ form.tags.id_for_label }}" class="form-label fw-semibold">
-                                Existing tags
-                            </label>
-                            {{ form.tags }}
-                            <div class="form-text">
-                                Select one or more tags you've already created.
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger" role="alert">
+                                {% for error in form.non_field_errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
                             </div>
-                            {% for error in form.tags.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
+                        {% endif %}
+
+                        <!-- Basic information -->
+                        <div class="mb-4">
+                            <h2 class="h6 fw-semibold mb-1">Basic information</h2>
+                            <p class="small text-secondary mb-3">
+                                Give your note a clear title and choose its type.
+                            </p>
+
+                            <div class="mb-3">
+                                <label for="{{ form.title.id_for_label }}"
+                                       class="form-label fw-medium">
+                                    Title
+                                </label>
+
+                                {{ form.title }}
+
+                                {% if form.title.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.title.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.note_type.id_for_label }}"
+                                       class="form-label fw-medium">
+                                    Note type
+                                </label>
+
+                                {{ form.note_type }}
+
+                                {% if form.note_type.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.note_type.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="{{ form.new_tags.id_for_label }}" class="form-label fw-semibold">
-                                Create new tags
-                            </label>
-                            {{ form.new_tags }}
-                            {% if form.new_tags.help_text %}
-                                <div class="form-text">{{ form.new_tags.help_text }}</div>
+                        <hr class="my-4">
+
+                        <!-- Note content -->
+                        <div class="mb-4">
+                            <h2 class="h6 fw-semibold mb-1">Content</h2>
+                            <p class="small text-secondary mb-3">
+                                Write your notes or save the information you want to remember.
+                            </p>
+
+                            <div class="mb-3">
+                                <label for="{{ form.body.id_for_label }}"
+                                       class="form-label fw-medium">
+                                    Note content
+                                </label>
+
+                                {{ form.body }}
+
+                                {% if form.body.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.body.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.code_language.id_for_label }}"
+                                       class="form-label fw-medium">
+                                    Programming language
+                                </label>
+
+                                {{ form.code_language }}
+
+                                {% if form.code_language.help_text %}
+                                    <div class="form-text">
+                                        {{ form.code_language.help_text }}
+                                    </div>
+                                {% endif %}
+
+                                {% if form.code_language.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.code_language.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.url.id_for_label }}"
+                                       class="form-label fw-medium">
+                                    External URL
+                                </label>
+
+                                {{ form.url }}
+
+                                {% if form.url.help_text %}
+                                    <div class="form-text">
+                                        {{ form.url.help_text }}
+                                    </div>
+                                {% endif %}
+
+                                {% if form.url.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.url.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Organisation -->
+                        <div class="mb-4">
+                            <h2 class="h6 fw-semibold mb-1">Organisation</h2>
+                            <p class="small text-secondary mb-3">
+                                Use tags to make your notes easier to find later.
+                            </p>
+
+                            <div class="mb-3">
+                                <label for="{{ form.tags.id_for_label }}"
+                                       class="form-label fw-medium">
+                                    Existing tags
+                                </label>
+
+                                {{ form.tags }}
+
+                                {% if form.tags.help_text %}
+                                    <div class="form-text">
+                                        {{ form.tags.help_text }}
+                                    </div>
+                                {% endif %}
+
+                                {% if form.tags.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.tags.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.new_tags.id_for_label }}"
+                                       class="form-label fw-medium">
+                                    Create new tags
+                                </label>
+
+                                {{ form.new_tags }}
+
+                                {% if form.new_tags.help_text %}
+                                    <div class="form-text">
+                                        {{ form.new_tags.help_text }}
+                                    </div>
+                                {% else %}
+                                    <div class="form-text">
+                                        Add new tags if the ones you need don't exist yet.
+                                    </div>
+                                {% endif %}
+
+                                {% if form.new_tags.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.new_tags.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Archive option -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                {{ form.archived }}
+
+                                <label class="form-check-label fw-medium"
+                                       for="{{ form.archived.id_for_label }}">
+                                    Archive this note
+                                </label>
+                            </div>
+
+                            <p class="form-text ms-4 mb-0">
+                                Archived notes are kept in your account but separated from your active workspace.
+                            </p>
+
+                            {% if form.archived.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.archived.errors }}
+                                </div>
                             {% endif %}
-                            {% for error in form.new_tags.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
                         </div>
-                    </div>
 
-                    <hr class="my-4">
+                        <!-- Actions -->
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pt-3 border-top">
 
-                    <!-- Archive -->
-                    <div class="mb-4">
-                        <div class="form-check">
-                            {{ form.archived }}
-                            <label class="form-check-label fw-semibold" for="{{ form.archived.id_for_label }}">
-                                Archive this note
-                            </label>
+                            <a href="{% if note %}{% url 'note_detail' note.pk %}{% else %}{% url 'home' %}{% endif %}"
+                               class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+
+                            <button type="submit" class="btn btn-primary px-4">
+                                {% if note %}
+                                    <i class="bi bi-check2-circle me-1"></i>
+                                    Save changes
+                                {% else %}
+                                    <i class="bi bi-plus-lg me-1"></i>
+                                    Create note
+                                {% endif %}
+                            </button>
+
                         </div>
-                        {% for error in form.archived.errors %}
-                            <div class="text-danger small mt-1">{{ error }}</div>
-                        {% endfor %}
-                    </div>
 
-                    <div class="d-flex flex-wrap gap-2">
-                        <button type="submit" class="btn btn-primary px-4">
-                            <i class="bi bi-check2 me-1"></i>
-                            {% if note %}Save changes{% else %}Create note{% endif %}
-                        </button>
-
-                        <a href="{% url 'home' %}" class="btn btn-outline-secondary px-4">
-                            Cancel
-                        </a>
-                    </div>
-
-                </form>
+                    </form>
+                </div>
             </div>
+        </div>
+
+        <!-- Helpful sidebar -->
+        <div class="col-lg-4">
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-lightbulb text-primary"></i>
+                        <h2 class="h6 fw-semibold mb-0">A few helpful tips</h2>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="fw-medium small mb-1">
+                            Keep titles searchable
+                        </div>
+                        <p class="small text-secondary mb-0">
+                            Use descriptive titles so you can find information quickly.
+                        </p>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="fw-medium small mb-1">
+                            Choose the right note type
+                        </div>
+                        <p class="small text-secondary mb-0">
+                            Use Text for ideas, Code for snippets, and Link for external resources.
+                        </p>
+                    </div>
+
+                    <div>
+                        <div class="fw-medium small mb-1">
+                            Make use of tags
+                        </div>
+                        <p class="small text-secondary mb-0">
+                            Group related notes with tags to keep your workspace organised.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="bi bi-shield-check text-success"></i>
+                        <h2 class="h6 fw-semibold mb-0">Your private workspace</h2>
+                    </div>
+
+                    <p class="small text-secondary mb-0">
+                        Your notes belong to your account. Keep your knowledge in one place and build your personal reference library.
+                    </p>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
+
 {% endblock %}
-```
