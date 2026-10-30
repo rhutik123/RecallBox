@@ -867,3 +867,88 @@ def test_user_cannot_restore_another_users_revision(self):
     other_note.refresh_from_db()
     self.assertEqual(other_note.title, "Private note")
     self.assertEqual(other_note.body, "Private body")
+
+
+class NoteCreationTagTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="newtaguser",
+            password="test-password-123",
+        )
+        self.client.login(
+            username="newtaguser",
+            password="test-password-123",
+        )
+
+    def test_note_can_be_created_with_new_tags(self):
+        response = self.client.post(
+            reverse("note_create"),
+            {
+                "title": "Django learning",
+                "body": "Learning Django forms",
+                "note_type": "text",
+                "code_language": "",
+                "url": "",
+                "archived": False,
+                "tags": [],
+                "new_tags": "Django, Backend, ORM",
+            },
+        )
+
+        self.assertRedirects(response, reverse("home"))
+
+        note = Note.objects.get(title="Django learning")
+
+        self.assertEqual(note.tags.count(), 3)
+        self.assertSetEqual(
+            set(note.tags.values_list("name", flat=True)),
+            {"Django", "Backend", "ORM"},
+        )
+
+    def test_existing_tag_is_reused_case_insensitively(self):
+        existing_tag = Tag.objects.create(
+            owner=self.user,
+            name="Django",
+        )
+
+        response = self.client.post(
+            reverse("note_create"),
+            {
+                "title": "Another Django note",
+                "body": "Reusing an existing tag",
+                "note_type": "text",
+                "code_language": "",
+                "url": "",
+                "archived": False,
+                "tags": [],
+                "new_tags": "django",
+            },
+        )
+
+        self.assertRedirects(response, reverse("home"))
+
+        note = Note.objects.get(title="Another Django note")
+
+        self.assertEqual(Tag.objects.filter(owner=self.user).count(), 1)
+        self.assertIn(existing_tag, note.tags.all())
+
+    def test_new_tags_are_not_created_for_invalid_note(self):
+        response = self.client.post(
+            reverse("note_create"),
+            {
+                "title": "",
+                "body": "This note is invalid",
+                "note_type": "text",
+                "code_language": "",
+                "url": "",
+                "archived": False,
+                "tags": [],
+                "new_tags": "Django, Backend",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Tag.objects.filter(owner=self.user).count(), 0)
+        self.assertFalse(
+            Note.objects.filter(owner=self.user).exists()
+        )

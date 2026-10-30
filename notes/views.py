@@ -175,23 +175,28 @@ def note_revision_restore(request, pk, revision_id):
     return redirect("note_revision_history", pk=note.pk)
 
 
+
 @login_required
 def note_create(request):
     if request.method == "POST":
         form = NoteForm(request.POST, user=request.user)
 
         if form.is_valid():
-            note = form.save(commit=False)
-            note.owner = request.user
-            note.save()
-            form.save_m2m()
+            with transaction.atomic():
+                note = form.save(commit=False)
+                note.owner = request.user
+                note.save()
+                form.save_m2m()
+
+                # Create and attach newly entered tags.
+                form.save_new_tags(note)
+
             messages.success(request, "Note created successfully.")
             return redirect("home")
     else:
         form = NoteForm(user=request.user)
 
     return render(request, "notes/note_form.html", {"form": form})
-
 
 
 
@@ -213,13 +218,11 @@ def note_update(request, pk):
         if form.is_valid():
             if form.has_changed():
                 with transaction.atomic():
-                    # Get the old values from the database.
                     old_note = Note.objects.select_for_update().get(
                         pk=note.pk,
                         owner=request.user,
                     )
 
-                    # Save the previous version.
                     revision = NoteRevision.objects.create(
                         note=old_note,
                         title=old_note.title,
@@ -231,18 +234,13 @@ def note_update(request, pk):
                         edited_by=request.user,
                     )
 
-                    # Preserve the previous tags.
                     revision.tags.set(old_note.tags.all())
 
-                    # Save the submitted changes.
-                    form.save()
+                    updated_note = form.save()
             else:
-                form.save()
+                updated_note = form.save()
 
-            messages.success(
-                request,
-                "Note updated successfully.",
-            )
+            messages.success(request, "Note updated successfully.")
             return redirect("home")
 
     else:
@@ -259,6 +257,7 @@ def note_update(request, pk):
             "note": note,
         },
     )
+
 
 @login_required
 def note_delete(request, pk):

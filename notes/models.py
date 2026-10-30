@@ -64,10 +64,11 @@ class Tag(models.Model):
         ordering = ["name"]
         constraints = [
             models.UniqueConstraint(
-                fields=["owner", "name"],
-                name="unique_tag_name_per_owner",
-        )
-    ]
+                models.functions.Lower("name"),
+                "owner",
+                name="unique_tag_name_per_owner_ci",
+            )
+        ]
 
     def __str__(self):
         return self.name
