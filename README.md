@@ -36,7 +36,7 @@ RecallBox helps you capture, organize, connect, and revisit useful information i
 ![RecallBox Note Detail](notes/docs/note%20view%20page.png)
 
 ### Note Revision History
-![RecallBox Note Revision History](notes/docs/note%20revision.png)
+![RecallBox Note Revision History](notes/docs/notes%20revision.png)
 
 ### Notes Overview
 ![RecallBox Notes Overview](notes/docs/notes.png)
