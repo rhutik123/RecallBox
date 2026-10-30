@@ -1,0 +1,916 @@
+
+{% extends "notes/base.html" %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+{% endblock %}
+
+{% block title %}Knowledge Graph | RecallBox{% endblock %}
+
+{% block page_heading %}Knowledge Graph{% endblock %}
+
+{% block content %}
+
+<div
+    class="rb-graph-page"
+    id="rbKnowledgeGraph"
+    data-graph-url="{% url 'knowledge_graph_data' %}"
+>
+
+    <!-- Page heading -->
+    <div class="rb-graph-header">
+        <div>
+            <h1 class="rb-graph-title">Knowledge Graph</h1>
+            <p class="rb-graph-description">
+                Explore the connections between your notes and ideas.
+            </p>
+        </div>
+    </div>
+
+    <!-- Graph toolbar -->
+    <div class="rb-graph-toolbar">
+
+        <div class="rb-graph-search">
+            <input
+                type="search"
+                id="rbGraphSearch"
+                placeholder="Search your notes..."
+                aria-label="Search graph notes"
+            >
+        </div>
+
+        <div class="rb-graph-stat">
+            <i class="bi bi-circle"></i>
+            Notes: <strong id="rbGraphNodeCount">0</strong>
+        </div>
+
+        <div class="rb-graph-stat">
+            <i class="bi bi-diagram-2"></i>
+            Connections: <strong id="rbGraphLinkCount">0</strong>
+        </div>
+
+        <button
+            type="button"
+            class="rb-graph-button"
+            id="rbGraphFit"
+            title="Fit graph to screen"
+        >
+            <i class="bi bi-arrows-fullscreen"></i>
+            Fit graph
+        </button>
+
+        <button
+            type="button"
+            class="rb-graph-button"
+            id="rbGraphReset"
+            title="Reset graph view and filters"
+        >
+            <i class="bi bi-arrow-counterclockwise"></i>
+            Reset
+        </button>
+
+    </div>
+
+    <!-- Note type filters -->
+    <div
+        class="rb-graph-type-filters"
+        role="group"
+        aria-label="Filter notes by type"
+    >
+
+        <label class="rb-graph-filter">
+            <input type="checkbox" value="text" checked>
+            <span>Text</span>
+        </label>
+
+        <label class="rb-graph-filter">
+            <input type="checkbox" value="code" checked>
+            <span>Code</span>
+        </label>
+
+        <label class="rb-graph-filter">
+            <input type="checkbox" value="link" checked>
+            <span>Link</span>
+        </label>
+
+    </div>
+
+    <!-- Connected-only filter -->
+    <label class="rb-graph-filter rb-graph-connected-filter">
+        <input
+            type="checkbox"
+            id="rbGraphConnectedOnly"
+        >
+        <i class="bi bi-diagram-3"></i>
+        <span>Connected only</span>
+    </label>
+
+    <!-- Graph canvas -->
+    <section
+        class="rb-graph-canvas"
+        id="rbGraphCanvas"
+        aria-label="Interactive knowledge graph"
+    >
+
+        <div class="rb-graph-loading" id="rbGraphLoading">
+            <i class="bi bi-diagram-3 fs-2"></i>
+            <span>Loading your knowledge graph...</span>
+        </div>
+
+        <div
+            class="rb-graph-error"
+            id="rbGraphError"
+            hidden
+        >
+            <i class="bi bi-exclamation-circle fs-2"></i>
+            <span id="rbGraphErrorMessage">
+                Unable to load your knowledge graph.
+            </span>
+        </div>
+
+        <div
+            class="rb-graph-empty"
+            id="rbGraphEmpty"
+            hidden
+        >
+            <i class="bi bi-diagram-3"></i>
+            <strong>Your knowledge space is empty</strong>
+            <span>Create some notes to see them appear here.</span>
+        </div>
+
+        <svg
+            id="rbGraphSvg"
+            role="img"
+            aria-label="Graph showing notes and their connections"
+        ></svg>
+
+    </section>
+
+    <!-- Graph legend -->
+    <div class="rb-graph-legend">
+
+        <span class="rb-graph-legend-item">
+            <span
+                class="rb-graph-legend-dot"
+                style="background: #9b83f5;"
+            ></span>
+            Text
+        </span>
+
+        <span class="rb-graph-legend-item">
+            <span
+                class="rb-graph-legend-dot"
+                style="background: #65c9a3;"
+            ></span>
+            Code
+        </span>
+
+        <span class="rb-graph-legend-item">
+            <span
+                class="rb-graph-legend-dot"
+                style="background: #e9ad73;"
+            ></span>
+            Link
+        </span>
+
+        <span class="ms-auto">
+            <i class="bi bi-mouse"></i>
+            Drag to move · Scroll to zoom
+        </span>
+
+    </div>
+
+</div>
+
+<!-- =====================================================
+     KNOWLEDGE GRAPH JAVASCRIPT
+===================================================== -->
+
+<script>
+(function () {
+
+    const page = document.getElementById("rbKnowledgeGraph");
+
+    if (!page) {
+        return;
+    }
+
+    const loading = document.getElementById("rbGraphLoading");
+    const empty = document.getElementById("rbGraphEmpty");
+    const error = document.getElementById("rbGraphError");
+    const errorMessage = document.getElementById("rbGraphErrorMessage");
+
+    if (typeof d3 === "undefined") {
+        loading.hidden = true;
+        error.hidden = false;
+
+        errorMessage.textContent =
+            "D3.js could not be loaded. Check your internet connection.";
+
+        return;
+    }
+
+    // =====================================================
+    // ELEMENT REFERENCES
+    // =====================================================
+
+    const graphUrl = page.dataset.graphUrl;
+
+    const canvas = document.getElementById("rbGraphCanvas");
+    const svg = d3.select("#rbGraphSvg");
+
+    const searchInput = document.getElementById("rbGraphSearch");
+
+    const nodeCount = document.getElementById("rbGraphNodeCount");
+    const linkCount = document.getElementById("rbGraphLinkCount");
+
+    // IMPORTANT: Only select the three note-type checkboxes.
+    // Connected-only has a separate class and is excluded.
+    const typeFilters = document.querySelectorAll(
+        ".rb-graph-type-filters input[type='checkbox']"
+    );
+
+    const connectedOnlyToggle = document.getElementById(
+        "rbGraphConnectedOnly"
+    );
+
+    const fitButton = document.getElementById("rbGraphFit");
+    const resetButton = document.getElementById("rbGraphReset");
+
+    // =====================================================
+    // GRAPH STATE
+    // =====================================================
+
+    let simulation = null;
+    let zoom = null;
+    let graphGroup = null;
+
+    let nodeElements = null;
+    let linkElements = null;
+
+    let graphNodes = [];
+    let graphLinks = [];
+
+    let selectedNodeId = null;
+
+    // =====================================================
+    // THEME COLORS
+    // =====================================================
+
+    function getNodeColor(type) {
+
+        const styles = getComputedStyle(page);
+
+        const colors = {
+            text: "--graph-text-node",
+            code: "--graph-code-node",
+            link: "--graph-link-node"
+        };
+
+        return styles.getPropertyValue(
+            colors[type] || colors.text
+        ).trim();
+    }
+
+    function updateGraphTheme() {
+
+        if (!nodeElements || !linkElements) {
+            return;
+        }
+
+        nodeElements
+            .select("circle")
+            .attr("fill", d => getNodeColor(d.type));
+
+        linkElements.attr(
+            "stroke",
+            getComputedStyle(document.documentElement)
+                .getPropertyValue("--text-muted")
+                .trim()
+        );
+    }
+
+    // =====================================================
+    // HELPER: GET LINK ENDPOINT ID
+    // =====================================================
+
+    function getEndpointId(endpoint) {
+
+        return typeof endpoint === "object"
+            ? endpoint.id
+            : endpoint;
+    }
+
+    // =====================================================
+    // ERROR HANDLING
+    // =====================================================
+
+    function showError(message) {
+
+        loading.hidden = true;
+        empty.hidden = true;
+        error.hidden = false;
+
+        errorMessage.textContent = message;
+    }
+
+    // =====================================================
+    // FIT GRAPH TO CANVAS
+    // =====================================================
+
+    function fitGraph() {
+
+        if (!graphGroup || graphNodes.length === 0) {
+            return;
+        }
+
+        const bounds = graphGroup.node().getBBox();
+
+        if (!bounds.width || !bounds.height) {
+            return;
+        }
+
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+
+        const padding = 65;
+
+        const scale = Math.min(
+            (width - padding * 2) / bounds.width,
+            (height - padding * 2) / bounds.height,
+            1.5
+        );
+
+        const x = width / 2 -
+            scale * (bounds.x + bounds.width / 2);
+
+        const y = height / 2 -
+            scale * (bounds.y + bounds.height / 2);
+
+        svg.transition()
+            .duration(500)
+            .call(
+                zoom.transform,
+                d3.zoomIdentity
+                    .translate(x, y)
+                    .scale(scale)
+            );
+    }
+
+    // =====================================================
+    // RESPONSIVE RESIZING
+    // =====================================================
+
+    const resizeObserver = new ResizeObserver(() => {
+
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+
+        if (!width || !height) {
+            return;
+        }
+
+        svg.attr("viewBox", `0 0 ${width} ${height}`);
+
+        if (simulation) {
+
+            simulation.force(
+                "center",
+                d3.forceCenter(width / 2, height / 2)
+            );
+
+            simulation.alpha(0.25).restart();
+        }
+
+    });
+
+    resizeObserver.observe(canvas);
+
+    // =====================================================
+    // APPLY FILTERS AND HIGHLIGHTING
+    // =====================================================
+
+    function applyNodeHighlights() {
+
+        if (!nodeElements || !linkElements) {
+            return;
+        }
+
+        const query = searchInput.value
+            .trim()
+            .toLowerCase();
+
+        // Get enabled note types.
+        const enabledTypes = new Set(
+            Array.from(typeFilters)
+                .filter(filter => filter.checked)
+                .map(filter => filter.value)
+        );
+
+        // Find notes that have at least one connection.
+        const notesWithConnections = new Set();
+
+        graphLinks.forEach(link => {
+
+            notesWithConnections.add(
+                getEndpointId(link.source)
+            );
+
+            notesWithConnections.add(
+                getEndpointId(link.target)
+            );
+
+        });
+
+        // Apply type and connected-only filters.
+        const visibleNodeIds = new Set(
+            graphNodes
+                .filter(node => {
+
+                    const typeEnabled = enabledTypes.has(node.type);
+
+                    const hasConnection =
+                        notesWithConnections.has(node.id);
+
+                    const connectionEnabled =
+                        !connectedOnlyToggle.checked || hasConnection;
+
+                    return typeEnabled && connectionEnabled;
+
+                })
+                .map(node => node.id)
+        );
+
+        // Clear selection if selected note is now hidden.
+        if (
+            selectedNodeId !== null &&
+            !visibleNodeIds.has(selectedNodeId)
+        ) {
+            selectedNodeId = null;
+        }
+
+        // Find direct connections of selected node.
+        const connectedIds = new Set();
+
+        if (selectedNodeId !== null) {
+
+            graphLinks.forEach(link => {
+
+                const sourceId = getEndpointId(link.source);
+                const targetId = getEndpointId(link.target);
+
+                if (sourceId === selectedNodeId) {
+                    connectedIds.add(targetId);
+                }
+
+                if (targetId === selectedNodeId) {
+                    connectedIds.add(sourceId);
+                }
+
+            });
+        }
+
+        // Update node visibility and highlighting.
+        nodeElements.each(function (node) {
+
+            const typeEnabled = enabledTypes.has(node.type);
+
+            const hasConnection =
+                notesWithConnections.has(node.id);
+
+            const connectionEnabled =
+                !connectedOnlyToggle.checked || hasConnection;
+
+            const visible = typeEnabled && connectionEnabled;
+
+            const matchesSearch = node.title
+                .toLowerCase()
+                .includes(query);
+
+            const isSelected = node.id === selectedNodeId;
+
+            const isConnected = connectedIds.has(node.id);
+
+            const hasSelection = selectedNodeId !== null;
+
+            const isDimmed =
+                (query !== "" && !matchesSearch) ||
+                (
+                    hasSelection &&
+                    !isSelected &&
+                    !isConnected
+                );
+
+            d3.select(this)
+                .style("display", visible ? null : "none")
+                .classed("is-dimmed", isDimmed)
+                .classed(
+                    "is-highlighted",
+                    query !== "" && matchesSearch
+                )
+                .classed("is-selected", isSelected)
+                .classed("is-connected", isConnected);
+
+        });
+
+        // Hide connections if either endpoint is hidden.
+        linkElements.each(function (link) {
+
+            const sourceId = getEndpointId(link.source);
+            const targetId = getEndpointId(link.target);
+
+            const linkVisible =
+                visibleNodeIds.has(sourceId) &&
+                visibleNodeIds.has(targetId);
+
+            const isConnected =
+                sourceId === selectedNodeId ||
+                targetId === selectedNodeId;
+
+            d3.select(this)
+                .style(
+                    "display",
+                    linkVisible ? null : "none"
+                )
+                .classed(
+                    "is-connected",
+                    linkVisible && isConnected
+                );
+
+        });
+
+        // Update visible statistics.
+        const visibleLinks = graphLinks.filter(link => {
+
+            return (
+                visibleNodeIds.has(getEndpointId(link.source)) &&
+                visibleNodeIds.has(getEndpointId(link.target))
+            );
+
+        });
+
+        nodeCount.textContent = visibleNodeIds.size;
+        linkCount.textContent = visibleLinks.length;
+    }
+
+    // =====================================================
+    // SEARCH
+    // =====================================================
+
+    function searchNotes() {
+        applyNodeHighlights();
+    }
+
+    // =====================================================
+    // NODE SELECTION
+    // =====================================================
+
+    function selectNode(node) {
+
+        if (selectedNodeId === node.id) {
+            selectedNodeId = null;
+        } else {
+            selectedNodeId = node.id;
+        }
+
+        applyNodeHighlights();
+    }
+
+    // =====================================================
+    // RESET GRAPH
+    // =====================================================
+
+    function resetGraph() {
+
+        if (!simulation) {
+            return;
+        }
+
+        searchInput.value = "";
+
+        typeFilters.forEach(filter => {
+            filter.checked = true;
+        });
+
+        connectedOnlyToggle.checked = false;
+
+        selectedNodeId = null;
+
+        applyNodeHighlights();
+
+        simulation
+            .alpha(0.7)
+            .restart();
+
+        fitGraph();
+    }
+
+    // =====================================================
+    // RENDER GRAPH
+    // =====================================================
+
+    function renderGraph(data) {
+
+        graphNodes = data.nodes;
+        graphLinks = data.links;
+
+        loading.hidden = true;
+
+        if (graphNodes.length === 0) {
+
+            nodeCount.textContent = "0";
+            linkCount.textContent = "0";
+
+            empty.hidden = false;
+            return;
+        }
+
+        empty.hidden = true;
+
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+
+        svg.selectAll("*").remove();
+
+        svg.attr(
+            "viewBox",
+            `0 0 ${width} ${height}`
+        );
+
+        graphGroup = svg.append("g");
+
+        // =================================================
+        // CONNECTIONS
+        // =================================================
+
+        linkElements = graphGroup
+            .append("g")
+            .selectAll("line")
+            .data(graphLinks)
+            .join("line")
+            .attr("class", "rb-graph-link")
+            .attr(
+                "stroke",
+                getComputedStyle(document.documentElement)
+                    .getPropertyValue("--text-muted")
+                    .trim()
+            );
+
+        // =================================================
+        // NODES
+        // =================================================
+
+        nodeElements = graphGroup
+            .append("g")
+            .selectAll("g")
+            .data(graphNodes)
+            .join("g")
+            .attr("class", "rb-graph-node")
+            .attr("tabindex", 0)
+            .attr("role", "link")
+            .attr(
+                "aria-label",
+                d => `Open note: ${d.title}`
+            )
+            .on("click", function (event, d) {
+
+                if (event.defaultPrevented) {
+                    return;
+                }
+
+                selectNode(d);
+            })
+            .on("dblclick", function (event, d) {
+
+                event.preventDefault();
+
+                window.location.href = d.url;
+            })
+            .on("keydown", function (event, d) {
+
+                if (event.key === "Enter") {
+                    window.location.href = d.url;
+                }
+
+                if (event.key === " ") {
+                    event.preventDefault();
+                    selectNode(d);
+                }
+            });
+
+        // Draw node circles.
+        nodeElements
+            .append("circle")
+            .attr("r", 11)
+            .attr("fill", d => getNodeColor(d.type));
+
+        // Draw node labels.
+        nodeElements
+            .append("text")
+            .attr("dy", 24)
+            .text(d => {
+
+                return d.title.length > 22
+                    ? d.title.slice(0, 19) + "..."
+                    : d.title;
+
+            });
+
+        // =================================================
+        // ZOOM AND PAN
+        // =================================================
+
+        zoom = d3.zoom()
+            .scaleExtent([0.2, 4])
+            .on("zoom", event => {
+
+                graphGroup.attr(
+                    "transform",
+                    event.transform
+                );
+
+            });
+
+        svg.call(zoom);
+
+        // =================================================
+        // DRAG NODES
+        // =================================================
+
+        const drag = d3.drag()
+
+            .on("start", (event, d) => {
+
+                if (!event.active) {
+                    simulation
+                        .alphaTarget(0.3)
+                        .restart();
+                }
+
+                d.fx = d.x;
+                d.fy = d.y;
+
+            })
+
+            .on("drag", (event, d) => {
+
+                d.fx = event.x;
+                d.fy = event.y;
+
+            })
+
+            .on("end", (event, d) => {
+
+                if (!event.active) {
+                    simulation.alphaTarget(0);
+                }
+
+                d.fx = null;
+                d.fy = null;
+
+            });
+
+        nodeElements.call(drag);
+
+        // =================================================
+        // FORCE-DIRECTED SIMULATION
+        // =================================================
+
+        simulation = d3.forceSimulation(graphNodes)
+
+            .force(
+                "link",
+                d3.forceLink(graphLinks)
+                    .id(d => d.id)
+                    .distance(115)
+            )
+
+            .force(
+                "charge",
+                d3.forceManyBody().strength(-350)
+            )
+
+            .force(
+                "center",
+                d3.forceCenter(
+                    width / 2,
+                    height / 2
+                )
+            )
+
+            .force(
+                "collision",
+                d3.forceCollide(32)
+            )
+
+            .on("tick", () => {
+
+                linkElements
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+
+                nodeElements.attr(
+                    "transform",
+                    d => `translate(${d.x}, ${d.y})`
+                );
+
+            });
+
+        simulation.on("end", fitGraph);
+
+        // Apply initial filters and counts.
+        applyNodeHighlights();
+    }
+
+    // =====================================================
+    // TOOLBAR EVENTS
+    // =====================================================
+
+    searchInput.addEventListener(
+        "input",
+        searchNotes
+    );
+
+    fitButton.addEventListener(
+        "click",
+        fitGraph
+    );
+
+    resetButton.addEventListener(
+        "click",
+        resetGraph
+    );
+
+    // Note-type filters.
+    typeFilters.forEach(filter => {
+
+        filter.addEventListener("change", () => {
+            applyNodeHighlights();
+        });
+
+    });
+
+    // Connected-only filter.
+    connectedOnlyToggle.addEventListener(
+        "change",
+        () => {
+            applyNodeHighlights();
+        }
+    );
+
+    // =====================================================
+    // DARK/LIGHT THEME OBSERVER
+    // =====================================================
+
+    const themeObserver = new MutationObserver(() => {
+        updateGraphTheme();
+    });
+
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["data-theme"]
+    });
+
+    // =====================================================
+    // LOAD DATA FROM DJANGO
+    // =====================================================
+
+    fetch(graphUrl)
+
+        .then(response => {
+
+            if (!response.ok) {
+                throw new Error(
+                    `Server returned ${response.status}`
+                );
+            }
+
+            return response.json();
+
+        })
+
+        .then(data => {
+
+            renderGraph(data);
+
+        })
+
+        .catch(error => {
+
+            console.error(
+                "Knowledge Graph error:",
+                error
+            );
+
+            showError(
+                "Unable to load your graph. Please refresh and try again."
+            );
+
+        });
+
+})();
+</script>
+
+{% endblock %}

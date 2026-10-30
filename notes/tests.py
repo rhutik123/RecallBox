@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+import json
 
 from .models import Note, Tag, NoteLink, NoteRevision
 
@@ -183,7 +184,10 @@ class NoteSearchTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "No matching notes")
+        self.assertContains(
+            response,
+            "We couldn't find any notes matching those filters."
+        )
         self.assertNotContains(response, "Python tutorial")
 
 
@@ -951,4 +955,130 @@ class NoteCreationTagTests(TestCase):
         self.assertEqual(Tag.objects.filter(owner=self.user).count(), 0)
         self.assertFalse(
             Note.objects.filter(owner=self.user).exists()
+        )
+
+
+
+class KnowledgeGraphDataTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="graphtester",
+            password="test-password-123",
+        )
+
+        self.other_user = User.objects.create_user(
+            username="othergraphtester",
+            password="test-password-123",
+        )
+
+        # Two connected notes belonging to our user.
+        self.note_a = Note.objects.create(
+            owner=self.user,
+            title="Python Basics",
+            body="Python fundamentals",
+        )
+
+        self.note_b = Note.objects.create(
+            owner=self.user,
+            title="Django Basics",
+            body="Django fundamentals",
+        )
+
+        # An unconnected note belonging to our user.
+        self.note_c = Note.objects.create(
+            owner=self.user,
+            title="Unconnected Note",
+            body="This note has no links",
+        )
+
+        # A private note belonging to another user.
+        self.other_note = Note.objects.create(
+            owner=self.other_user,
+            title="Private Note",
+            body="This should not appear",
+        )
+
+        NoteLink.objects.create(
+            source_note=self.note_a,
+            target_note=self.note_b,
+        )
+
+        self.client.login(
+            username="graphtester",
+            password="test-password-123",
+        )
+
+    def test_knowledge_graph_requires_login(self):
+        self.client.logout()
+
+        response = self.client.get(
+            reverse("knowledge_graph_data")
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_graph_returns_all_own_notes(self):
+        response = self.client.get(
+            reverse("knowledge_graph_data")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response["Content-Type"],
+            "application/json",
+        )
+
+        data = json.loads(response.content)
+
+        returned_note_ids = {
+            node["id"] for node in data["nodes"]
+        }
+
+        expected_note_ids = {
+            self.note_a.id,
+            self.note_b.id,
+            self.note_c.id,
+        }
+
+        self.assertSetEqual(
+            returned_note_ids,
+            expected_note_ids,
+        )
+
+    def test_graph_returns_only_own_links(self):
+        response = self.client.get(
+            reverse("knowledge_graph_data")
+        )
+
+        data = json.loads(response.content)
+
+        returned_links = {
+            (link["source"], link["target"])
+            for link in data["links"]
+        }
+
+        expected_links = {
+            (self.note_a.id, self.note_b.id),
+        }
+
+        self.assertSetEqual(
+            returned_links,
+            expected_links,
+        )
+
+    def test_graph_does_not_expose_other_users_notes(self):
+        response = self.client.get(
+            reverse("knowledge_graph_data")
+        )
+
+        data = json.loads(response.content)
+
+        returned_note_ids = {
+            node["id"] for node in data["nodes"]
+        }
+
+        self.assertNotIn(
+            self.other_note.id,
+            returned_note_ids,
         )

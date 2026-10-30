@@ -10,6 +10,8 @@ from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.core.exceptions import ValidationError
 from django.db.models import Prefetch
+from django.http import JsonResponse
+from django.urls import reverse
 
 # Create your views here.
 
@@ -352,4 +354,60 @@ def note_link_create(request, pk):
             "form": form,
             "source_note": source_note,
         },
+    )
+
+
+@login_required
+def knowledge_graph_data(request):
+    notes = Note.objects.filter(
+        owner=request.user
+    ).values(
+        "id",
+        "title",
+        "note_type",
+    )
+
+    note_ids = [note["id"] for note in notes]
+
+    links = NoteLink.objects.filter(
+        source_note__owner=request.user,
+        target_note__owner=request.user,
+    ).values(
+        "source_note_id",
+        "target_note_id",
+    )
+
+    nodes = [
+        {
+            "id": note["id"],
+            "title": note["title"],
+            "type": note["note_type"],
+            "url": reverse(
+                "note_detail",
+                args=[note["id"]],
+            ),
+        }
+        for note in notes
+    ]
+
+    edges = [
+        {
+            "source": link["source_note_id"],
+            "target": link["target_note_id"],
+        }
+        for link in links
+        if link["source_note_id"] in note_ids
+        and link["target_note_id"] in note_ids
+    ]
+
+    return JsonResponse({
+        "nodes": nodes,
+        "links": edges,
+    })
+
+@login_required
+def knowledge_graph(request):
+    return render(
+        request,
+        "notes/knowledge_graph.html",
     )

@@ -1504,6 +1504,377 @@
             opacity: 1 !important;
         }
 
+        /* ==========================================
+        RECALLBOX — KNOWLEDGE GRAPH
+        ========================================== */
+
+        .rb-graph-page {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            min-width: 0;
+            animation: rbGraphEnter 350ms ease both;
+        }
+
+        @keyframes rbGraphEnter {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .rb-graph-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .rb-graph-title {
+            margin: 0;
+            font-family: var(--font-display);
+            font-size: clamp(22px, 3vw, 30px);
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+
+        .rb-graph-description {
+            margin: 5px 0 0;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .rb-graph-toolbar {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 9px;
+            padding: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+
+        .rb-graph-search {
+            flex: 1;
+            min-width: 180px;
+            max-width: 320px;
+        }
+
+        .rb-graph-search input {
+            width: 100%;
+            min-height: 38px;
+            padding: 8px 12px;
+            color: var(--text);
+            background: var(--input-bg);
+            border: 1px solid var(--border-strong);
+            border-radius: 8px;
+            font: inherit;
+            font-size: 12px;
+        }
+
+        .rb-graph-search input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+
+        .rb-graph-stat {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 11px;
+            color: var(--text-secondary);
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 11px;
+        }
+
+        .rb-graph-stat strong {
+            color: var(--text);
+            font-size: 13px;
+        }
+
+        .rb-graph-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            min-height: 38px;
+            padding: 7px 11px;
+            color: var(--text-secondary);
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            font: inherit;
+            font-size: 12px;
+            transition: all var(--transition);
+        }
+
+        .rb-graph-button:hover {
+            color: var(--accent);
+            border-color: var(--accent-border);
+            background: var(--accent-soft);
+        }
+
+        .rb-graph-canvas {
+            position: relative;
+            width: 100%;
+            height: min(70vh, 720px);
+            min-height: 430px;
+            overflow: hidden;
+            background-color: var(--surface);
+            background-image:
+                radial-gradient(var(--grid-line) 1px, transparent 1px);
+            background-size: 24px 24px;
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            box-shadow: var(--shadow-small);
+        }
+
+        .rb-graph-canvas svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+            touch-action: none;
+        }
+
+        .rb-graph-canvas svg:active {
+            cursor: grabbing;
+        }
+
+        .rb-graph-link {
+            stroke: var(--text-muted);
+            stroke-opacity: 0.35;
+            stroke-width: 1.5px;
+        }
+
+        .rb-graph-node {
+            cursor: pointer;
+        }
+
+        .rb-graph-node circle {
+            stroke: var(--surface);
+            stroke-width: 2.5px;
+            transition: stroke-width 150ms ease;
+        }
+
+        .rb-graph-node:hover circle {
+            stroke: var(--accent);
+            stroke-width: 4px;
+        }
+
+        .rb-graph-node text {
+            fill: var(--text-secondary);
+            font-family: var(--font-main);
+            font-size: 11px;
+            pointer-events: none;
+            text-anchor: middle;
+        }
+
+        .rb-graph-node.is-dimmed {
+            opacity: 0.13;
+        }
+
+        .rb-graph-node.is-highlighted circle {
+            stroke: var(--accent);
+            stroke-width: 4px;
+        }
+
+        .rb-graph-empty,
+        .rb-graph-loading,
+        .rb-graph-error {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 25px;
+            color: var(--text-muted);
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .rb-graph-empty i {
+            color: var(--accent);
+            font-size: 34px;
+        }
+
+        .rb-graph-legend {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding: 12px 15px;
+            color: var(--text-secondary);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            font-size: 11px;
+        }
+
+        .rb-graph-legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .rb-graph-legend-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+        }
+
+        @media (max-width: 575.98px) {
+            .rb-graph-toolbar {
+                align-items: stretch;
+            }
+
+            .rb-graph-search {
+                flex-basis: 100%;
+                max-width: none;
+            }
+
+            .rb-graph-canvas {
+                height: 60vh;
+                min-height: 360px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .rb-graph-page {
+                animation: none;
+            }
+        }
+
+        /* ==========================================
+        KNOWLEDGE GRAPH — VISIBILITY IMPROVEMENTS
+        ========================================== */
+
+        /* Dark theme node palette */
+        html[data-theme="dark"] .rb-graph-page {
+            --graph-text-node: #a18af7;
+            --graph-code-node: #65c9a3;
+            --graph-link-node: #e9ad73;
+        }
+
+        /* Light theme: stronger, more readable colors */
+        html[data-theme="light"] .rb-graph-page {
+            --graph-text-node: #7050cc;
+            --graph-code-node: #16845f;
+            --graph-link-node: #b66a1b;
+        }
+
+        /* Make connections more visible */
+        .rb-graph-link {
+            stroke: var(--text-muted);
+            stroke-opacity: 0.55;
+            stroke-width: 1.8px;
+        }
+
+        /* Larger, clearer nodes */
+        .rb-graph-node circle {
+            stroke: var(--surface);
+            stroke-width: 3px;
+            filter: drop-shadow(0 2px 4px rgba(40, 30, 70, 0.16));
+        }
+
+        /* Improve note title readability */
+        .rb-graph-node text {
+            fill: var(--text);
+            font-family: var(--font-main);
+            font-size: 13px;
+            font-weight: 600;
+            paint-order: stroke;
+            stroke: var(--surface);
+            stroke-width: 3px;
+            stroke-linejoin: round;
+            pointer-events: none;
+            text-anchor: middle;
+        }
+
+        /* More noticeable selected and highlighted nodes */
+        .rb-graph-node.is-highlighted circle {
+            stroke: var(--accent);
+            stroke-width: 4px;
+            filter: drop-shadow(0 0 7px var(--accent));
+        }
+
+        .rb-graph-node.is-dimmed {
+            opacity: 0.12;
+        }
+
+                
+        /* Selected node */
+        .rb-graph-node.is-selected circle {
+            stroke: var(--accent);
+            stroke-width: 4px;
+            filter: drop-shadow(0 0 9px var(--accent));
+        }
+
+        /* Directly connected nodes */
+        .rb-graph-node.is-connected circle {
+            stroke: var(--accent);
+            stroke-width: 3px;
+        }
+
+        /* Highlight connections of selected node */
+        .rb-graph-link.is-connected {
+            stroke: var(--accent);
+            stroke-opacity: 1;
+            stroke-width: 2.8px;
+        }
+
+
+    /* Knowledge Graph type filters */
+
+    .rb-graph-type-filters {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 7px;
+    }
+
+    .rb-graph-filter {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 10px;
+        color: var(--text-secondary);
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 11px;
+        cursor: pointer;
+        transition: all var(--transition);
+    }
+
+    .rb-graph-filter:has(input:checked) {
+        color: var(--accent);
+        background: var(--accent-soft);
+        border-color: var(--accent-border);
+    }
+
+    .rb-graph-filter input {
+        accent-color: var(--accent);
+        cursor: pointer;
+    }
+
+    @media (max-width: 575.98px) {
+        .rb-graph-type-filters {
+            flex-basis: 100%;
+        }
+    }
 
 
     </style>
@@ -1540,9 +1911,20 @@
 
         <nav class="rb-sidebar-nav" aria-label="Workspace navigation">
 
-            <a href="{% url 'home' %}" class="rb-nav-link active">
+            <a
+                href="{% url 'home' %}"
+                class="rb-nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
+            >
                 <i class="bi bi-grid-1x2"></i>
                 <span>My Workspace</span>
+            </a>
+
+            <a
+                href="{% url 'knowledge_graph' %}"
+                class="rb-nav-link {% if request.resolver_match.url_name == 'knowledge_graph' %}active{% endif %}"
+            >
+                <i class="bi bi-diagram-3"></i>
+                <span>Knowledge Graph</span>
             </a>
 
         </nav>

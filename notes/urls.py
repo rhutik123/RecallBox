@@ -15,4 +15,6 @@ urlpatterns = [
     path("notes/<int:pk>/detail/", views.note_detail, name="note_detail"),
     path("notes/<int:pk>/revisions/", views.note_revision_history, name="note_revision_history"),
     path("notes/<int:pk>/revisions/<int:revision_id>/restore/", views.note_revision_restore, name="note_revision_restore",),
+    path("knowledge-graph/", views.knowledge_graph, name="knowledge_graph",),
+    path("knowledge-graph/data/", views.knowledge_graph_data, name="knowledge_graph_data",),
 ]
